@@ -120,4 +120,4 @@ tests/               Vitest 单元测试
 
 ## 许可证
 
-代码为个人项目，未附带第三方素材。图标来自 `lucide-react`（ISC）。
+本项目采用 [MIT License](LICENSE)。未附带第三方素材，图标来自 `lucide-react`（ISC）。
