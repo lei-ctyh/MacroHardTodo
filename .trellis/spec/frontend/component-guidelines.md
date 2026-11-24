@@ -17,12 +17,15 @@ const setMyDay = useStore((s) => s.setMyDay);
 ```
 
 - Do not subscribe to the whole store object and destructure; it re-renders on every keystroke.
-- Sidebar layout follows Microsoft To Do: brand → always-visible search → smart views → ungrouped lists → group sections → inline new-list input; the footer pairs `新建列表` with an icon-only `创建新组` button, while 同步/设置 live in the account dropdown opened from the brand.
+- Sidebar layout follows Microsoft To Do without text section headings: 我的一天 → 重要 / 计划内 / 全部 / 已完成 → 固定「任务」默认清单 → divider → custom lists/groups → inline new-list input. The footer pairs `新建列表` with an icon-only `创建新组` button; 同步/设置 live in the account dropdown opened from the brand.
+- The fixed default list uses `DEFAULT_LIST_ID`: it is always present, is not draggable/groupable, and cannot be renamed or deleted. QuickAdd from smart views targets it; the list view itself targets that list.
+- The account row uses a circular avatar + two-line identity (`本地用户` / `本地数据`) and no chevron; clicking the row opens the account menu, clicking the avatar opens the image picker. The search box below has the magnifier on the right and the placeholder `搜索`.
 - The sidebar is resizable via `.sidebar-resizer` (clamped 200–420px, persisted in `settings.sidebarWidth`, double-click resets to 240). Selected nav rows use an inset `::before` highlight (2px vertical, 3px radius) with the accent bar in `::after` (3×16px, `--nav-accent`).
 - Sidebar counts use `.sidebar .nav-count` badges (20px circle/pill, radius 10px, `--nav-badge` / `--nav-badge-text`); the suggestion panel's count stays plain text.
+- Smart-list icons use 16px, 1.5 stroke width; per-item colors: My Day `--accent`, 全部/已完成 `--smart-red`, 重要/计划内/任务 `--text-secondary`. Active rows do not override icon colors; 已完成 uses a circled check.
 - The app theme effect also calls `api.setTitleBarTheme(dark)` so the native Windows caption color (`#F3F3F3` / `#252423`) stays in sync with the sidebar.
-- Group headers are `GroupRow`: chevron collapse, name (double-click or menu → inline rename), hover `MoreIcon` menu (重命名 / 删除组). Group actions never live on individual list rows.
-- Deleting a group only removes the group; its lists return to the ungrouped section and keep their tasks.
+- Group headers are `GroupRow`: group icon left, name, collapse chevron right (up when expanded, down when collapsed); there is no `...` button. Right-click opens a context menu: empty groups show 重命名组 / 新建列表 / 删除组 (Delete hint); non-empty groups show 重命名组 / 新建列表 / 取消分组列表. 新建列表 creates a custom list inside the group; 取消分组列表 keeps the lists and ungroups them. The whole group section is the drop target; empty groups show an indented `group-empty` hint (`拖到此处来添加列表`). Group lists use `.group-lists .nav-item` padding-left 49px; the default list is not groupable.
+- Custom lists without an emoji show a 16px `ListLinesIcon` tinted with `list.color` (accent by default), not a dot.
 - One `DndContext` wraps the whole list area. Each section (ungrouped + every group) has its own `SortableContext`; group headers and the ungrouped drop zone are `group:<id>` / `group:ungrouped` droppables. Group headers themselves are not draggable — group order is creation order.
 - Section building and drag resolution are pure helpers (`listSections`, `moveList` in `views.ts`); keep components free of that logic.
 - The content header has exactly one `ViewMenu` (`MoreIcon`) per view. My Day additionally keeps the suggestion (lightbulb) button; do not re-add header search or palette icons.

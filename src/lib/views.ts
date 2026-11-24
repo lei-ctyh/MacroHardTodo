@@ -100,7 +100,7 @@ export function tasksForView(db: DB, view: View): Task[] {
       return all
         .filter((t) => t.completed)
         .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
-    case "tasks":
+    case "all":
     default:
       return all.filter((t) => !t.completed).sort((a, b) => a.order - b.order);
   }
@@ -117,7 +117,7 @@ export function smartCounts(db: DB): Record<SmartViewId, number> {
     myday: all.filter((t) => !t.completed && t.myDay === todayISO()).length,
     important: all.filter((t) => !t.completed && t.importance === "high").length,
     planned: all.filter((t) => !t.completed && (t.dueDate || t.reminderAt)).length,
-    tasks: all.filter((t) => !t.completed).length,
+    all: all.filter((t) => !t.completed).length,
     completed: all.filter((t) => t.completed).length,
   };
 }
@@ -232,12 +232,12 @@ export function headerInfo(
     case "important":
       return { title: "重要" };
     case "planned":
-      return { title: "计划中" };
+      return { title: "计划内" };
     case "completed":
       return { title: "已完成" };
-    case "tasks":
+    case "all":
     default:
-      return { title: "任务" };
+      return { title: "全部" };
   }
 }
 

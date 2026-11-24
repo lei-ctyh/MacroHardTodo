@@ -31,7 +31,7 @@ Make navigation, search, and top-right actions mirror Microsoft To Do so the app
 ## Key Decisions
 
 - Sort state is stored per view key (`list:<id>` / `smart:<id>`) in local settings; it does not sync across devices.
-- Themes are per view: lists keep `list.theme`; smart views store their theme in `db.shared` (`mydayTheme` for My Day, `theme:<smartId>` for the rest). Every view, including 重要 / 计划中 / 任务 / 已完成, can pick a background.
+- Themes are per view: lists keep `list.theme`; smart views store their theme in `db.shared` (`mydayTheme` for My Day, `theme:<smartId>` for the rest). Every view, including 重要 / 计划内 / 任务 / 已完成, can pick a background.
 - "已添加" sorts by `createdAt` ascending (oldest first); "字母顺序" uses `localeCompare("zh-CN")`; "重要" puts high importance first; "截止日期" puts missing dates last.
 - Renaming a list happens inline in the content header, not in the sidebar.
 - The theme dialog becomes the single place for list identity: color, emoji, and background.
@@ -57,6 +57,11 @@ Make navigation, search, and top-right actions mirror Microsoft To Do so the app
 - [ ] Groups merge across WebDAV devices using the same LWW + tombstone rules, and deleting a list or group does not resurrect on sync.
 - [ ] Dragging the sidebar divider changes the width within 200–420px, the content reflows, and the width persists after restart; double-click resets it to 240px.
 - [ ] The selected-row highlight uses the Microsoft-matched geometry and accent color from R21.
+- [ ] The account row has no chevron; clicking the row opens the menu, and clicking the avatar opens an image picker that persists the chosen avatar locally.
+- [ ] Existing data gains the fixed 任务 list on load while `AAA` remains a custom list under 列表.
+- [ ] QuickAdd from smart views or My Day creates the task in 任务; QuickAdd from a custom list keeps it there.
+- [ ] The sidebar shows 我的一天, 重要 / 计划内 / 全部 / 已完成, the fixed 任务 row, a divider, and custom lists/groups — with no text section headings; the 任务 list menu has no rename/delete.
+- [ ] Group headers have no `...`; right-click opens 重命名组 / 新建列表 plus 删除组 (empty) or 取消分组列表 (non-empty); 新建列表 adds a list inside the group.
 - [ ] On Windows 11 the native title bar background matches the sidebar in light and dark themes, and keeps native minimize/maximize/close behavior.
 - [ ] Clicking the brand/account area opens a dropdown with 同步 (showing status) and 设置; the footer contains only the new-list/new-group row.
 - [ ] Existing list actions (rename/theme/delete) and sorting continue to work for grouped lists.
@@ -76,6 +81,10 @@ Make navigation, search, and top-right actions mirror Microsoft To Do so the app
 - R20: The sidebar width is user-resizable by dragging the divider between the sidebar and the content, like Microsoft To Do. The width is clamped to a usable range, persists locally, and can be reset by double-clicking the divider.
 - R21: The selected-row highlight matches Microsoft To Do's geometry: ~6px side gaps, 36px tall, small corner radius (~3px), with the 3×16px accent bar inside the highlight at its left edge.
 - R22: On Windows 11, the native title bar uses DWM caption/text colors matching the sidebar (`#F3F3F3` light / `#252423` dark) and updates when the app theme changes. Non-Windows builds are a no-op.
+- R23: The account row has no chevron; clicking the row opens the account menu, while clicking the circular avatar opens an image picker and saves a local avatar (falling back to the app icon when none is set).
+- R24: Add a fixed default list `任务` (`DEFAULT_LIST_ID`). It always exists, is shown separately from the 列表 section, cannot be renamed or deleted, and is not draggable/groupable. New tasks created from smart views or My Day go into it; new tasks created while viewing a custom list stay in that list.
+- R25: Reorganize the sidebar without text section headings: 我的一天, then 重要 / 计划内 / 全部 / 已完成, then the fixed 任务 default list, a divider, then custom lists/groups. The former all-tasks smart view is renamed 全部; `AAA` and other user-created lists are custom.
+- R26: Group headers have no `...` button. Right-clicking a group opens a context menu with 重命名组 / 新建列表, plus 删除组 for empty groups or 取消分组列表 for non-empty groups; 新建列表 creates a list inside that group and selects it. Lists without an emoji use a blue list-lines icon. Expanded groups show an up chevron and empty groups show the indented drag hint.
 
 ## Out of Scope
 

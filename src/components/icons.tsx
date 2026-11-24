@@ -10,9 +10,12 @@ export {
   Sun as SunIcon,
   Star as StarOutlineIcon,
   Calendar as CalendarIcon,
-  ListTodo as HomeIcon,
+  House as HomeIcon,
   ListTodo as ListIcon,
-  ListChecks as CompletedIcon,
+  List as ListLinesIcon,
+  SquareDashed as UngroupIcon,
+  Infinity as AllIcon,
+  CircleCheck as CompletedIcon,
   Check as CheckIcon,
   Check as CheckSmallIcon,
   X as CloseIcon,
@@ -24,6 +27,7 @@ export {
   Repeat as RepeatIcon,
   ChevronRight as ChevronRightIcon,
   ChevronDown as ChevronDownIcon,
+  ChevronUp as ChevronUpIcon,
   ArrowUpDown as SortIcon,
   Copy as CopyIcon,
   Cloud as CloudIcon,
@@ -46,6 +50,30 @@ export {
 
 export function StarFilledIcon(props: LucideProps) {
   return <Star {...props} fill="currentColor" strokeWidth={1.5} />;
+}
+
+/**
+ * 分组：圆角方框 + 左侧竖线（与新建组图标同一套形状，无加号）。
+ */
+export function GroupIcon(props: LucideProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M8 9v6" />
+    </svg>
+  );
 }
 
 /**

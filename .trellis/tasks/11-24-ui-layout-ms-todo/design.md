@@ -250,14 +250,15 @@ footer: [ + 新建列表 ][ □+ 创建新组 ]
 
 ### Account Menu
 
-- Wrap `.brand` in a `.brand-wrap` (position relative) and make the brand row a button (`aria-haspopup="menu"`, `aria-expanded`).
-- Clicking toggles a dropdown below the brand using the existing `.menu` styles; it closes on outside mousedown, Escape, or selecting an item.
+- Wrap `.brand` in a `.brand-wrap` (position relative); the row is a `role="button"` div with hover styling. Clicking the row toggles the menu; the avatar is a nested `<button>` that stops propagation and opens the image picker.
+- No chevron is rendered.
+- Avatar: `Settings.avatar?: ThemeImage` (local-only). `pickAvatar` uses the Tauri dialog plugin, copies the file through `attachmentAdd`, and stores `{ relPath, mime, name, size }`; the sidebar resolves it via `attachmentRead` into a data URL and renders it with `object-fit: cover`. Missing files fall back to the app check icon.
+- Clicking the avatar closes the menu before opening the picker; outside-click/Escape still close the menu.
 - Menu content:
-  - A non-interactive header with the app name and sync status summary.
+  - A non-interactive header with the local profile.
   - 同步 (CloudIcon): opens the existing sync dialog; shows `未配置` / `未同步` / last sync time / `正在同步` (spinner) / error text.
   - 设置 (SettingsIcon): opens the existing settings dialog.
 - Remove the 同步/设置 rows from `.sidebar-footer`; the footer keeps only `.sidebar-new-row` (`新建列表` + `创建新组`).
-- Keep the small `.brand-sync` status dot next to the brand name.
 
 ## Resizable Sidebar
 
@@ -283,6 +284,37 @@ footer: [ + 新建列表 ][ □+ 创建新组 ]
   - `DWMWA_TEXT_COLOR` (36) = `0x00202020` light / `0x00F1F2F1` dark.
 - The `set_titlebar_theme(dark)` Tauri command is registered and called by the frontend theme effect; `setup` applies the light default immediately so the first paint is close.
 - Non-Windows targets compile to a no-op. Native caption buttons, drag, snap, and accessibility remain untouched (unlike a custom title bar).
+
+## Account Area Metrics (Microsoft-matched)
+
+- Avatar 46px circle; row padding `18px 18px 12px`; avatar-to-text gap 12px.- Name 16px/600; subtitle 13px in `--text-secondary`; no chevron.
+- Search box 36px tall, 6px radius, light border with a darker bottom underline and no shadow, 14px input, 18px horizontal page padding; search starts at 76px from the top.
+- The footer has no vertical padding: the `新建列表` + `创建新组` row is exactly 40px, matching nav rows.
+- Clicking the row opens the menu; clicking the avatar opens the image picker.
+
+## Default List & Smart Views
+
+- `DEFAULT_LIST_ID = "list_default"`; `createDB` seeds a list named `任务` with that id.
+- `ensureDefaultList(db)` adds the list if missing and revives it if tombstoned; `normalizeDb` calls it on load/import.
+- Sidebar order: 我的一天 → 重要 / 计划内 / 全部 / 已完成 → fixed 任务 default list → divider → custom lists/groups. There are no text section headings (`智能列表`/`列表` were removed); the divider separates the fixed entries from custom lists. The default list is excluded from `listSections`/drag-and-drop.
+- `SMART_VIEWS` becomes `["myday","important","planned","all","completed"]`; the old `tasks` view maps to the new `all` (label 全部).
+- `MainPane` QuickAdd target is `view.type === "list" ? view.id : DEFAULT_LIST_ID`.
+- `ViewMenu` receives `fixed` for the default list and hides rename/delete; the store refuses to delete `DEFAULT_LIST_ID`.
+- Custom lists (e.g. `AAA`) remain normal: creatable, renamable, groupable, deletable.
+
+## Smart List Icons
+
+- Icons are 16px with 1.5 stroke width (Fluent-like thin lines). My Day: `--accent` sun; 全部/已完成: `--smart-red` (`#C42B1C` light / `#FF6B5E` dark); 重要/计划内/任务: `--text-secondary`.
+- Active rows keep the per-icon color (the inset highlight and accent bar indicate selection); 已完成 uses Lucide `CircleCheck`.
+
+## Group Rows
+
+- Group header: 20px group glyph on the left (rounded square + inner line), name, and a collapse chevron on the right (up when expanded, down when collapsed). Height 40px, hover uses `--nav-hover`. No `...` button.
+- Right-clicking the header opens a fixed-position context menu at the cursor: 重命名组 / 新建列表, then a separator. Empty groups show 删除组 (danger, `Delete` hint); non-empty groups show 取消分组列表 (keeps lists, removes the group). `Delete` only triggers for empty groups while the menu is open.
+- 新建列表 creates a custom list via `addList("无标题列表", groupId)`, expands the group, and selects the new list. Lists without an emoji render a 16px list-lines glyph tinted with `list.color` (accent default).
+- The whole `group-section` is the `group:<id>` droppable, so empty groups can receive a drag anywhere in the section.
+- Empty expanded groups render `.group-empty` (indented 49px, 2px vertical line + `拖到此处来添加列表`).
+- Group lists are indented ~37px relative to top-level list icons, with the icon slightly right of the group name (`.group-lists .nav-item` padding-left 49px); the default 任务 list is not groupable.
 
 ## Trade-offs
 

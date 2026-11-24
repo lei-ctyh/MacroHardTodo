@@ -29,7 +29,7 @@ type DB = {
 | Lists, tasks, steps, attachments | `db.lists` / `db.tasks` | Yes (entity LWW merge) |
 | List groups | `db.groups`, referenced by `TaskList.groupId` | Yes (entity LWW merge + tombstones) |
 | Cross-device preferences (view themes for My Day and other smart views) | `db.shared[key]` | Yes (per-key LWW) |
-| Device/UI preferences (theme mode, purge days, WebDAV config, per-view sort, collapsed groups, sidebar width) | `db.settings` | No |
+| Device/UI preferences (theme mode, purge days, WebDAV config, per-view sort, collapsed groups, sidebar width, avatar) | `db.settings` | No |
 | Transient UI (search open, suggestion panel, editors, dialogs) | component `useState` | No |
 | Current view / selected task / query | store (`view`, `selectedTaskId`, `query`) | No |
 
@@ -63,6 +63,7 @@ Compute, never store:
 
 - Views/counts/suggestions: `src/lib/views.ts` (`tasksForView`, `smartCounts`, `myDaySuggestionGroups`).
 - Sort order: `sortTasks(tasks, sort)` in `src/lib/views.ts`, keyed per view with `viewKey(view)` and stored in `settings.sortBy`.
+- The fixed default list uses `DEFAULT_LIST_ID`; `ensureDefaultList` adds/revives it on load. The sidebar renders it separately from custom lists, and QuickAdd from smart views targets it.
 - Sidebar sections: `listSections(lists, groups)` and `moveList(sections, activeId, overId)` in `src/lib/views.ts`; rendering computes them with `useMemo`, never stores them.
 - Due labels: `src/lib/dates.ts`.
 - Merge outcome / fingerprint: `src/lib/merge.ts`.

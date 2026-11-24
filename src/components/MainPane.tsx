@@ -14,7 +14,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useStore } from "../store/useStore";
-import { activeLists, activeTasks, type ListTheme, type Task } from "../lib/model";
+import { activeLists, activeTasks, DEFAULT_LIST_ID, type ListTheme, type Task } from "../lib/model";
 import {
   headerInfo,
   searchTasks,
@@ -90,7 +90,7 @@ export function MainPane() {
   );
 
   const targetListId =
-    view.type === "list" ? view.id : activeLists(db)[0]?.id;
+    view.type === "list" ? view.id : DEFAULT_LIST_ID;
 
   const sortable = view.type === "list" && !query.trim() && sort === "manual";
   const sensors = useSensors(
@@ -235,7 +235,8 @@ export function MainPane() {
             view={view}
             list={themeTarget?.type === "list" ? themeTarget.list : undefined}
             sort={sort}
-            canDelete={activeLists(db).length > 1}
+            canDelete={view.type === "list" && view.id !== DEFAULT_LIST_ID}
+            fixed={view.type === "list" && view.id === DEFAULT_LIST_ID}
             onSort={(key) => {
               setSort(viewKey(view), key);
               setMenuOpen(false);
@@ -452,7 +453,7 @@ function emptyTitle(id: string): string {
       return "还没有计划";
     case "completed":
       return "还没有已完成的任务";
-    case "tasks":
+    case "all":
       return "还没有任务";
     default:
       return "这个列表还是空的";

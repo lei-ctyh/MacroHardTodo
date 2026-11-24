@@ -16,6 +16,7 @@ export function ViewMenu({
   list,
   sort,
   canDelete,
+  fixed = false,
   onSort,
   onRename,
   onTheme,
@@ -26,6 +27,7 @@ export function ViewMenu({
   list?: TaskList;
   sort: SortKey;
   canDelete: boolean;
+  fixed?: boolean;
   onSort: (sort: SortKey) => void;
   onRename: () => void;
   onTheme: () => void;
@@ -36,6 +38,7 @@ export function ViewMenu({
   const ref = useRef<HTMLDivElement>(null);
 
   const isList = view.type === "list";
+  const showListActions = isList && !fixed;
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -59,7 +62,7 @@ export function ViewMenu({
       role="menu"
       aria-label={list ? `${list.name} 菜单` : "视图菜单"}
     >
-      {isList ? (
+      {showListActions ? (
         <button role="menuitem" onClick={onRename}>
           <EditIcon /> 重命名
         </button>
@@ -97,7 +100,7 @@ export function ViewMenu({
           ))}
         </div>
       ) : null}
-      {isList ? (
+      {showListActions ? (
         <>
           <div className="sep" />
           <button

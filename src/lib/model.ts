@@ -3,8 +3,11 @@ export type ID = string;
 /** 列表排序方式：我的顺序 / 重要 / 截止日期 / 已添加 / 字母顺序 */
 export type SortKey = "manual" | "importance" | "due" | "added" | "alpha";
 
-export const SMART_VIEWS = ["myday", "important", "planned", "tasks", "completed"] as const;
+export const SMART_VIEWS = ["myday", "important", "planned", "all", "completed"] as const;
 export type SmartViewId = (typeof SMART_VIEWS)[number];
+
+/** 固定默认清单：不属于任何清单的新任务都进入这里 */
+export const DEFAULT_LIST_ID = "list_default";
 
 export interface Attachment {
   id: string;
@@ -132,6 +135,8 @@ export interface Settings {
   collapsedGroups: string[];
   /** 侧栏宽度（px）；仅本地保存 */
   sidebarWidth?: number;
+  /** 本地头像；仅本地保存 */
+  avatar?: ThemeImage;
 }
 
 export interface DB {
@@ -173,6 +178,46 @@ export function nowMs(): number {
   return Date.now();
 }
 
+/** 确保固定的「任务」默认清单存在；被误删时恢复 */
+export function ensureDefaultList(db: DB): DB {
+  const deviceId = db.deviceId;
+  const now = nowMs();
+  const existing = db.lists.find((l) => l.id === DEFAULT_LIST_ID);
+  if (!existing) {
+    return {
+      ...db,
+      lists: [
+        ...db.lists,
+        {
+          id: DEFAULT_LIST_ID,
+          name: "任务",
+          order: 0,
+          createdAt: now,
+          updatedAt: now,
+          updatedBy: deviceId,
+        },
+      ],
+    };
+  }
+  if (existing.deletedAt) {
+    return {
+      ...db,
+      lists: db.lists.map((l) =>
+        l.id === DEFAULT_LIST_ID
+          ? {
+              ...l,
+              name: l.name || "任务",
+              deletedAt: undefined,
+              updatedAt: now,
+              updatedBy: deviceId,
+            }
+          : l,
+      ),
+    };
+  }
+  return db;
+}
+
 export function uid(prefix = ""): string {
   const id =
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -188,7 +233,7 @@ export function newDeviceId(): string {
 export function createDB(deviceId: string): DB {
   const now = nowMs();
   const tasksList: TaskList = {
-    id: uid("list"),
+    id: DEFAULT_LIST_ID,
     name: "任务",
     order: 0,
     createdAt: now,

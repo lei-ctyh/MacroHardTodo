@@ -2,6 +2,7 @@ import { create } from "zustand";
 import Papa from "papaparse";
 import { api } from "../lib/api";
 import {
+  DEFAULT_LIST_ID,
   DEFAULT_SETTINGS,
   activeGroups,
   activeLists,
@@ -10,6 +11,7 @@ import {
   createGroup,
   createStep,
   createTask,
+  ensureDefaultList,
   newDeviceId,
   nowMs,
   uid,
@@ -58,7 +60,7 @@ export interface StoreState {
   openDialog: (dialog: DialogKind) => void;
   focusQuickAdd: () => void;
 
-  addList: (name: string) => string | null;
+  addList: (name: string, groupId?: string) => string | null;
   renameList: (id: string, name: string) => void;
   setListColor: (id: string, color: string) => void;
   setListTheme: (id: string, theme: ListTheme | undefined) => void;
@@ -111,9 +113,10 @@ export interface StoreState {
 }
 
 function normalizeDb(raw: Partial<DB>): DB {
-  return {
+  const deviceId = raw.deviceId || newDeviceId();
+  return ensureDefaultList({
     schemaVersion: 1,
-    deviceId: raw.deviceId || newDeviceId(),
+    deviceId,
     lists: Array.isArray(raw.lists) ? raw.lists : [],
     groups: Array.isArray(raw.groups) ? raw.groups : [],
     tasks: Array.isArray(raw.tasks)
@@ -125,7 +128,7 @@ function normalizeDb(raw: Partial<DB>): DB {
       : [],
     shared: raw.shared && typeof raw.shared === "object" ? raw.shared : {},
     settings: { ...DEFAULT_SETTINGS, ...(raw.settings ?? {}) },
-  };
+  });
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -176,13 +179,6 @@ export const useStore = create<StoreState>((set, get) => {
       ...db,
       tasks: db.tasks.map((t) => (t.id === id ? fn(t, db.deviceId) : t)),
     }));
-  };
-
-  const defaultListId = (): string | null => {
-    const { db, view } = get();
-    if (view.type === "list") return view.id;
-    const first = activeLists(db)[0];
-    return first?.id ?? null;
   };
 
   return {
@@ -269,7 +265,7 @@ export const useStore = create<StoreState>((set, get) => {
     openDialog: (dialog) => set({ dialog }),
     focusQuickAdd: () => set((s) => ({ quickAddNonce: s.quickAddNonce + 1 })),
 
-    addList: (name) => {
+    addList: (name, groupId) => {
       const trimmed = name.trim();
       if (!trimmed) return null;
       const db = get().db;
@@ -285,6 +281,7 @@ export const useStore = create<StoreState>((set, get) => {
             id,
             name: trimmed,
             order,
+            groupId,
             createdAt: now,
             updatedAt: now,
             updatedBy: d.deviceId,
@@ -334,8 +331,8 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     deleteList: (id) => {
+      if (id === DEFAULT_LIST_ID) return;
       const db = get().db;
-      if (activeLists(db).length <= 1) return;
       const now = nowMs();
       commit((d) => ({
         ...d,

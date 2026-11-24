@@ -99,6 +99,23 @@
 - [ ] Run `cargo check`, `npx tsc --noEmit`, `npm test`, `npm run build`.
 - [ ] Restart the dev app and verify the native title bar color with a full-window screenshot.
 
+## Avatar Picker
+
+- [ ] `model.ts`: add `Settings.avatar?: ThemeImage`.
+- [ ] `Sidebar.tsx`: remove the chevron; row opens the menu; avatar button uses `open()` + `attachmentAdd` + `updateSettings`; resolve the avatar via `attachmentRead` with icon fallback.
+- [ ] `styles.css`: `.brand-avatar` button/image styles; remove `.brand-caret`.
+- [ ] Update `component-guidelines.md` / `state-management.md` for the avatar setting and row interaction.
+
+## Default List & Smart Views
+
+- [ ] `model.ts`: `DEFAULT_LIST_ID`, `ensureDefaultList`, seed `createDB`, `SMART_VIEWS` → `all`.
+- [ ] `useStore.ts`: normalizeDb ensures the default list; deleteList refuses the default; QuickAdd default target.
+- [ ] `views.ts`: `tasksForView`/`smartCounts`/`headerInfo` use `all`; labels 全部.
+- [ ] `Sidebar.tsx`: 我的一天, 智能列表 section, fixed 任务 row, custom lists only; default excluded from DnD.
+- [ ] `MainPane.tsx` / `ViewMenu.tsx`: target default list, `fixed` menu hides rename/delete, empty states use `all`.
+- [ ] README/spec updates; add `tests/default-list.test.ts`.
+- [ ] Run `npm test`, `npx tsc --noEmit`, `npm run build`; reload the app and verify the default list appears and QuickAdd targets it.
+
 ## Validation Commands
 
 ```bash

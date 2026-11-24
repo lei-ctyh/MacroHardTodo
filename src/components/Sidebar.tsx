@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import {
   DndContext,
   PointerSensor,
@@ -16,19 +17,21 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  DEFAULT_LIST_ID,
   activeGroups,
   activeLists,
   type TaskList,
 } from "../lib/model";
 import { listCounts, listSections, moveList, smartCounts, UNGROUPED_SECTION_KEY } from "../lib/views";
+import { api } from "../lib/api";
 import { useStore } from "../store/useStore";
 import {
+  AllIcon,
   CalendarIcon,
-  CheckIcon,
-  ChevronDownIcon,
   CloudIcon,
   CompletedIcon,
   HomeIcon,
+  ListLinesIcon,
   NewGroupIcon,
   PlusIcon,
   SearchIcon,
@@ -39,11 +42,25 @@ import {
 import { GroupRow } from "./GroupRow";
 
 const SMART_ITEMS = [
-  { id: "myday", label: "我的一天", Icon: SunIcon },
-  { id: "important", label: "重要", Icon: StarOutlineIcon },
-  { id: "planned", label: "计划中", Icon: CalendarIcon },
-  { id: "tasks", label: "任务", Icon: HomeIcon },
-  { id: "completed", label: "已完成", Icon: CompletedIcon },
+  {
+    id: "important",
+    label: "重要",
+    Icon: StarOutlineIcon,
+    color: "var(--text-secondary)",
+  },
+  {
+    id: "planned",
+    label: "计划内",
+    Icon: CalendarIcon,
+    color: "var(--text-secondary)",
+  },
+  { id: "all", label: "全部", Icon: AllIcon, color: "var(--smart-red)" },
+  {
+    id: "completed",
+    label: "已完成",
+    Icon: CompletedIcon,
+    color: "var(--smart-red)",
+  },
 ] as const;
 
 const UNGROUPED_KEY = UNGROUPED_SECTION_KEY;
@@ -62,8 +79,17 @@ export function Sidebar() {
   const deleteGroup = useStore((s) => s.deleteGroup);
   const toggleGroupCollapsed = useStore((s) => s.toggleGroupCollapsed);
   const reorganizeLists = useStore((s) => s.reorganizeLists);
+  const updateSettings = useStore((s) => s.updateSettings);
 
-  const lists = useMemo(() => activeLists(db), [db]);
+  const allLists = useMemo(() => activeLists(db), [db]);
+  const lists = useMemo(
+    () => allLists.filter((l) => l.id !== DEFAULT_LIST_ID),
+    [allLists],
+  );
+  const defaultList = useMemo(
+    () => allLists.find((l) => l.id === DEFAULT_LIST_ID),
+    [allLists],
+  );
   const groups = useMemo(() => activeGroups(db), [db]);
   const collapsedGroups = db.settings.collapsedGroups ?? [];
   const counts = useMemo(() => smartCounts(db), [db]);
@@ -119,6 +145,58 @@ export function Sidebar() {
     };
   }, [accountOpen]);
 
+  const avatar = db.settings.avatar;
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+
+  useEffect(() => {
+    let alive = true;
+    setAvatarUrl(undefined);
+    if (!avatar?.relPath) return;
+    api
+      .attachmentRead(avatar.relPath)
+      .then((base64) => {
+        if (alive) {
+          setAvatarUrl(
+            `data:${avatar.mime || "image/png"};base64,${base64}`,
+          );
+        }
+      })
+      .catch(() => {
+        /* 文件缺失时回退到应用图标 */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [avatar?.relPath, avatar?.mime]);
+
+  const pickAvatar = async () => {
+    setAccountOpen(false);
+    try {
+      const path = await open({
+        multiple: false,
+        directory: false,
+        filters: [
+          {
+            name: "图片",
+            extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp"],
+          },
+        ],
+      });
+      if (typeof path !== "string") return;
+      const info = await api.attachmentAdd(path);
+      updateSettings({
+        avatar: {
+          relPath: info.relPath,
+          mime: info.mime,
+          name: info.name,
+          size: info.size,
+        },
+      });
+    } catch {
+      /* 取消或读取失败 */
+    }
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
@@ -165,14 +243,6 @@ export function Sidebar() {
     setAutoRenameId(id);
   };
 
-  const syncClass = sync.running
-    ? "busy"
-    : sync.error
-      ? "err"
-      : sync.message
-        ? "ok"
-        : "";
-
   const syncStatusText = sync.running
     ? "正在同步"
     : sync.error
@@ -185,6 +255,12 @@ export function Sidebar() {
             })
           : "未同步"
         : "未配置";
+
+  const addListToGroup = (groupId: string) => {
+    if (collapsedGroups.includes(groupId)) toggleGroupCollapsed(groupId);
+    const id = addList("无标题列表", groupId);
+    if (id) setView({ type: "list", id });
+  };
 
   const listRow = (list: TaskList) => (
     <SortableListRow
@@ -199,26 +275,47 @@ export function Sidebar() {
   return (
     <aside className={`sidebar ${dragging ? "drag-active" : ""}`}>
       <div className="brand-wrap" ref={accountRef}>
-        <button
+        <div
           className="brand"
+          role="button"
+          tabIndex={0}
           onClick={() => setAccountOpen((open) => !open)}
+          onKeyDown={(event) => {
+            if (event.target !== event.currentTarget) return;
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setAccountOpen((open) => !open);
+            }
+          }}
           aria-haspopup="menu"
           aria-expanded={accountOpen}
         >
-          <div className="brand-logo">
-            <CheckIcon />
+          <button
+            type="button"
+            className={`brand-logo brand-avatar ${
+              avatarUrl ? "has-photo" : "has-logo"
+            }`}
+            title="更换头像"
+            onClick={(event) => {
+              event.stopPropagation();
+              void pickAvatar();
+            }}
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" />
+            ) : (
+              <img src="/logo.png" alt="" />
+            )}
+          </button>
+          <div className="brand-text">
+            <div className="brand-name">本地用户</div>
+            <div className="brand-sub">本地数据</div>
           </div>
-          <div className="brand-name">MacroHard Todo</div>
-          <span
-            className={`brand-sync ${syncClass}`}
-            title={sync.message ?? sync.error ?? "未同步"}
-          />
-          <ChevronDownIcon className="brand-caret" />
-        </button>
+        </div>
         {accountOpen ? (
           <div className="menu account-menu" role="menu">
             <div className="account-head">
-              <div className="account-title">MacroHard Todo</div>
+              <div className="account-title">本地用户</div>
               <div className="account-sub">本地数据</div>
             </div>
             <div className="sep" />
@@ -249,11 +346,10 @@ export function Sidebar() {
 
       <div className="sidebar-search">
         <div className="search-box">
-          <SearchIcon />
           <input
             value={query}
-            placeholder="搜索任务"
-            aria-label="搜索任务"
+            placeholder="搜索"
+            aria-label="搜索"
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Escape") {
@@ -262,11 +358,24 @@ export function Sidebar() {
               }
             }}
           />
+          <SearchIcon />
         </div>
       </div>
 
       <div className="sidebar-scroll">
-        {SMART_ITEMS.map(({ id, label, Icon }) => {
+        <div
+          className={`nav-item ${
+            view.type === "smart" && view.id === "myday" ? "active" : ""
+          }`}
+          onClick={() => setView({ type: "smart", id: "myday" })}
+        >
+          <span className="nav-icon" style={{ color: "var(--accent)" }}>
+            <SunIcon size={16} strokeWidth={1.5} />
+          </span>
+          <span className="nav-label">我的一天</span>
+        </div>
+
+        {SMART_ITEMS.map(({ id, label, Icon, color }) => {
           const active = view.type === "smart" && view.id === id;
           const count = counts[id];
           return (
@@ -275,20 +384,35 @@ export function Sidebar() {
               className={`nav-item ${active ? "active" : ""}`}
               onClick={() => setView({ type: "smart", id })}
             >
-              <span className="nav-icon">
-                <Icon />
+              <span className="nav-icon" style={{ color }}>
+                <Icon size={16} strokeWidth={1.5} />
               </span>
               <span className="nav-label">{label}</span>
-              {id !== "myday" && count > 0 ? (
-                <span className="nav-count">{count}</span>
-              ) : null}
+              {count > 0 ? <span className="nav-count">{count}</span> : null}
             </div>
           );
         })}
 
-        <div className="section-head">
-          <span>列表</span>
+        <div
+          className={`nav-item ${
+            view.type === "list" && view.id === DEFAULT_LIST_ID ? "active" : ""
+          }`}
+          onClick={() => setView({ type: "list", id: DEFAULT_LIST_ID })}
+        >
+          <span className="nav-icon">
+            {defaultList?.theme?.emoji ? (
+              <span className="nav-emoji">{defaultList.theme.emoji}</span>
+            ) : (
+              <HomeIcon size={16} strokeWidth={1.5} />
+            )}
+          </span>
+          <span className="nav-label">{defaultList?.name ?? "任务"}</span>
+          {(perList[DEFAULT_LIST_ID] ?? 0) > 0 ? (
+            <span className="nav-count">{perList[DEFAULT_LIST_ID]}</span>
+          ) : null}
         </div>
+
+        <div className="sidebar-divider" />
 
         <DndContext
           sensors={sensors}
@@ -312,26 +436,31 @@ export function Sidebar() {
             </SortableContext>
           </div>
 
-          {groups.map((group) => (
-            <GroupRow
-              key={group.id}
-              group={group}
-              collapsed={collapsedGroups.includes(group.id)}
-              dropTarget={dragOverGroup === group.id}
-              autoRename={autoRenameId === group.id}
-              onRenameHandled={() => setAutoRenameId(null)}
-              onToggle={() => toggleGroupCollapsed(group.id)}
-              onRename={(name) => renameGroup(group.id, name)}
-              onDelete={() => deleteGroup(group.id)}
-            >
-              <SortableContext
-                items={(sections.byGroup.get(group.id) ?? []).map((l) => l.id)}
-                strategy={verticalListSortingStrategy}
+          {groups.map((group) => {
+            const groupLists = sections.byGroup.get(group.id) ?? [];
+            return (
+              <GroupRow
+                key={group.id}
+                group={group}
+                collapsed={collapsedGroups.includes(group.id)}
+                empty={groupLists.length === 0}
+                dropTarget={dragOverGroup === group.id}
+                autoRename={autoRenameId === group.id}
+                onRenameHandled={() => setAutoRenameId(null)}
+                onToggle={() => toggleGroupCollapsed(group.id)}
+                onRename={(name) => renameGroup(group.id, name)}
+                onDelete={() => deleteGroup(group.id)}
+                onAddList={() => addListToGroup(group.id)}
               >
-                {(sections.byGroup.get(group.id) ?? []).map(listRow)}
-              </SortableContext>
-            </GroupRow>
-          ))}
+                <SortableContext
+                  items={groupLists.map((l) => l.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {groupLists.map(listRow)}
+                </SortableContext>
+              </GroupRow>
+            );
+          })}
 
           {adding ? (
             <div ref={addRowRef} className="nav-item" style={{ background: "var(--hover)" }}>
@@ -385,7 +514,7 @@ export function Sidebar() {
             aria-label="创建新组"
             onClick={createGroup}
           >
-            <NewGroupIcon />
+            <NewGroupIcon strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -445,9 +574,11 @@ function SortableListRow({
           <span className="nav-emoji">{list.theme.emoji}</span>
         ) : (
           <span
-            className="nav-list-dot"
-            style={{ background: list.color ?? "var(--text-tertiary)" }}
-          />
+            className="nav-list-glyph"
+            style={{ color: list.color ?? "var(--accent)" }}
+          >
+            <ListLinesIcon size={16} strokeWidth={1.5} />
+          </span>
         )}
       </span>
       <span className="nav-label">{list.name}</span>

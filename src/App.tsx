@@ -19,7 +19,7 @@ import { TaskDetail } from "./components/TaskDetail";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { SyncDialog } from "./components/SyncDialog";
 import { MigrationWizard } from "./components/MigrationWizard";
-import { CheckIcon, CloseSmallIcon, WarningIcon } from "./components/icons";
+import { CloseSmallIcon, WarningIcon } from "./components/icons";
 
 const notified = new Set<string>();
 
@@ -230,7 +230,7 @@ export default function App() {
         }}
       >
         <div className="brand-logo">
-          <CheckIcon />
+          <img src="/logo.png" alt="" />
         </div>
         正在加载…
       </div>
