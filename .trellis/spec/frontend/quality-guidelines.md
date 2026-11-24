@@ -45,7 +45,7 @@ Do not re-package the installer for every UI tweak — use `tauri dev`; build on
 
 - Merge changes (`merge.ts`) and recurrence changes (`recurrence.ts`) require a new Vitest case.
 - Data-model changes require updating `normalizeDb` and at least a manual load of an old `todo-data.json`.
-- UI changes: verify with `tauri dev`; when automation is needed, use the CDP scripts pattern under `C:\software\_installers` (headless Chrome for `npm run dev`, or `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` for the installed app).
+- UI changes: verify with `tauri dev`; when automation is needed, drive the app through CDP (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` for the installed app, headless Chrome for `npm run dev`) and keep temporary scripts, screenshots and test data in the project's gitignored `.test-artifacts/` — never in external directories such as `C:\software`.
 - Rust command changes: `cargo check` plus a manual call through the UI.
 
 ---

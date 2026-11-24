@@ -28,7 +28,7 @@
 - Unit tests: `node node_modules/vitest/vitest.mjs run`
 - Rust: `cargo check` from `src-tauri`
 - Manual: `npm run tauri dev` (hot reload) for Tauri APIs; `npm run dev` + a browser for pure UI work
-- UI regression: use the CDP helpers in `C:\software\_installers\cdp-*.mjs` when a browser preview is needed
+- UI regression: when automation is needed, drive the app through Chrome DevTools Protocol on `127.0.0.1:9222`; keep temporary scripts, screenshots and test data under the project's gitignored `.test-artifacts/`, never in directories outside the repo
 
 ---
 
