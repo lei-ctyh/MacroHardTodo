@@ -1,51 +1,61 @@
 # Quality Guidelines
 
-> Code quality standards for frontend development.
+> Code quality standards for this project.
 
 ---
 
-## Overview
+## Commands
 
-<!--
-Document your project's quality standards here.
+| Check | Command |
+|---|---|
+| TypeScript | `node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json` |
+| Unit tests | `node node_modules/vitest/vitest.mjs run` |
+| Rust | `cargo check` (cwd `src-tauri`) |
+| Frontend build | `npm run build` |
+| Installer | `npm run tauri build` (NSIS, currentUser) |
+| Dev (hot reload) | `npm run tauri dev` |
 
-Questions to answer:
-- What patterns are forbidden?
-- What linting rules do you enforce?
-- What are your testing requirements?
-- What code review standards apply?
--->
-
-(To be filled by the team)
-
----
-
-## Forbidden Patterns
-
-<!-- Patterns that should never be used and why -->
-
-(To be filled by the team)
+Do not re-package the installer for every UI tweak — use `tauri dev`; build only at milestones.
 
 ---
 
 ## Required Patterns
 
-<!-- Patterns that must always be used -->
+- Pure logic in `src/lib/` with Vitest coverage for merge/recurrence/date boundaries.
+- All persistence through `useStore.commit`; all I/O through `src/lib/api.ts`.
+- Soft delete + `updatedAt`/`updatedBy` on every entity write.
+- Design tokens in `styles.css`; no hard-coded hex values in components (data-driven colors excepted).
+- New user-facing strings in Simplified Chinese; code and comments in English or Chinese matching the file.
 
-(To be filled by the team)
+---
+
+## Forbidden Patterns
+
+- **Microsoft assets**: no Microsoft To Do icons, images, logos, or the “Microsoft To Do” name in the product. UI may be inspired by it; assets must be original or open-source (lucide, our SVG backgrounds).
+- Secrets in `DB` or `localStorage`: WebDAV/Graph credentials go to Windows Credential Manager (`secret.rs`).
+- Direct `invoke(...)` in components; use `api.ts`.
+- Mutating Zustand state in place.
+- `any` and unsafe casts (see `type-safety.md`).
+- Blocking the UI thread with large base64 work without a size guard (theme images warn above 12 MB).
+- Removing the fixed bottom `QuickAdd` or showing it on the Completed page.
 
 ---
 
 ## Testing Requirements
 
-<!-- What level of testing is expected -->
-
-(To be filled by the team)
+- Merge changes (`merge.ts`) and recurrence changes (`recurrence.ts`) require a new Vitest case.
+- Data-model changes require updating `normalizeDb` and at least a manual load of an old `todo-data.json`.
+- UI changes: verify with `tauri dev`; when automation is needed, use the CDP scripts pattern under `C:\software\_installers` (headless Chrome for `npm run dev`, or `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` for the installed app).
+- Rust command changes: `cargo check` plus a manual call through the UI.
 
 ---
 
 ## Code Review Checklist
 
-<!-- What reviewers should check -->
-
-(To be filled by the team)
+- [ ] `tsc` and `vitest` pass; `cargo check` passes if Rust changed
+- [ ] New persisted fields handled by normalize/merge
+- [ ] No secrets in the document; no Microsoft assets
+- [ ] Fixed bottom add bar present on all pages except Completed
+- [ ] Theme/background behavior verified on both a list and My Day (if touched)
+- [ ] Sync/import changes covered by tests or a documented manual scenario
+- [ ] Chinese UI strings render; dark mode contrast OK

@@ -1,12 +1,34 @@
 # Frontend Development Guidelines
 
-> Best practices for frontend development in this project.
+> Conventions for the MacroHard Todo desktop frontend (React 18 + TypeScript + Tauri 2).
 
 ---
 
-## Overview
+## Stack
 
-This directory contains guidelines for frontend development. Fill in each file with your project's specific conventions.
+- React 18 function components, Vite, Zustand, dnd-kit, date-fns, lucide-react
+- Tauri 2 (WebView2) shell; OS, file, WebDAV and Graph work goes through Rust commands
+- One global stylesheet with design tokens: `src/styles.css` (no CSS-in-JS, no Tailwind classes in markup — Tailwind is only imported for reset/utilities)
+
+---
+
+## Pre-Development Checklist
+
+- Read `src/lib/model.ts` (data shapes) and `src/store/useStore.ts` (mutations) before adding a field or action.
+- Decide whether the state is **persisted/synced** (goes into `DB`) or **local UI state** (stays in the component).
+- Search `src/lib/` for an existing pure helper before writing new logic (`merge.ts`, `recurrence.ts`, `views.ts`, `themes.ts`, `graphImport.ts`, `syncClient.ts`).
+- If data is synced, update `mergeDB`/`fingerprint` semantics and add a Vitest case.
+- Check whether the change also needs a Rust command (`src-tauri/src/*.rs`) and a typed wrapper in `src/lib/api.ts`.
+
+---
+
+## Quality Check
+
+- TypeScript: `node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`
+- Unit tests: `node node_modules/vitest/vitest.mjs run`
+- Rust: `cargo check` from `src-tauri`
+- Manual: `npm run tauri dev` (hot reload) for Tauri APIs; `npm run dev` + a browser for pure UI work
+- UI regression: use the CDP helpers in `C:\software\_installers\cdp-*.mjs` when a browser preview is needed
 
 ---
 
@@ -14,26 +36,9 @@ This directory contains guidelines for frontend development. Fill in each file w
 
 | Guide | Description | Status |
 |-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | To fill |
-| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
-| [State Management](./state-management.md) | Local state, global state, server state | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
-
----
-
-## How to Fill These Guidelines
-
-For each guideline file:
-
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.
+| [Directory Structure](./directory-structure.md) | Module organization and file layout | Filled |
+| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | Filled |
+| [Hook Guidelines](./hook-guidelines.md) | Effects, selectors, async patterns | Filled |
+| [State Management](./state-management.md) | Zustand store, DB document, persistence | Filled |
+| [Quality Guidelines](./quality-guidelines.md) | Commands, testing, forbidden patterns | Filled |
+| [Type Safety](./type-safety.md) | Type organization, validation, casts | Filled |
