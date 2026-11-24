@@ -56,6 +56,6 @@ Do not re-package the installer for every UI tweak — use `tauri dev`; build on
 - [ ] New persisted fields handled by normalize/merge
 - [ ] No secrets in the document; no Microsoft assets
 - [ ] Fixed bottom add bar present on all pages except Completed
-- [ ] Theme/background behavior verified on both a list and My Day (if touched)
+- [ ] Theme/background behavior verified on a list and at least one smart view (if touched)
 - [ ] Sync/import changes covered by tests or a documented manual scenario
 - [ ] Chinese UI strings render; dark mode contrast OK

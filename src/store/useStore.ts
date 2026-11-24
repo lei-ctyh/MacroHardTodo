@@ -3,9 +3,11 @@ import Papa from "papaparse";
 import { api } from "../lib/api";
 import {
   DEFAULT_SETTINGS,
+  activeGroups,
   activeLists,
   activeTasks,
   createDB,
+  createGroup,
   createStep,
   createTask,
   newDeviceId,
@@ -14,6 +16,7 @@ import {
   type DB,
   type ListTheme,
   type Settings,
+  type SortKey,
   type Step,
   type Task,
 } from "../lib/model";
@@ -61,7 +64,12 @@ export interface StoreState {
   setListTheme: (id: string, theme: ListTheme | undefined) => void;
   setShared: (key: string, value: unknown) => void;
   deleteList: (id: string) => void;
-  reorderLists: (ids: string[]) => void;
+  reorganizeLists: (entries: { id: string; groupId?: string }[]) => void;
+
+  addGroup: (name?: string) => string;
+  renameGroup: (id: string, name: string) => void;
+  deleteGroup: (id: string) => void;
+  toggleGroupCollapsed: (id: string) => void;
 
   addTask: (input: {
     listId: string;
@@ -91,6 +99,7 @@ export interface StoreState {
   ensureAttachment: (relPath: string) => Promise<boolean>;
 
   updateSettings: (patch: Partial<Settings>) => void;
+  setSort: (key: string, sort: SortKey) => void;
 
   exportJson: (path: string) => Promise<void>;
   importJson: (path: string) => Promise<void>;
@@ -106,6 +115,7 @@ function normalizeDb(raw: Partial<DB>): DB {
     schemaVersion: 1,
     deviceId: raw.deviceId || newDeviceId(),
     lists: Array.isArray(raw.lists) ? raw.lists : [],
+    groups: Array.isArray(raw.groups) ? raw.groups : [],
     tasks: Array.isArray(raw.tasks)
       ? raw.tasks.map((t) => ({
           ...t,
@@ -349,17 +359,101 @@ export const useStore = create<StoreState>((set, get) => {
       }
     },
 
-    reorderLists: (ids) => {
-      commit((db) => {
-        const orderMap = new Map(ids.map((id, index) => [id, index]));
+    reorganizeLists: (entries) => {
+      const orderMap = new Map(entries.map((entry, index) => [entry.id, index]));
+      const groupMap = new Map(entries.map((entry) => [entry.id, entry.groupId]));
+      commit((db) => ({
+        ...db,
+        lists: db.lists.map((l) =>
+          orderMap.has(l.id)
+            ? {
+                ...l,
+                order: orderMap.get(l.id)!,
+                groupId: groupMap.get(l.id),
+                ...touch(db.deviceId),
+              }
+            : l,
+        ),
+      }));
+    },
+
+    addGroup: (name) => {
+      const db = get().db;
+      const trimmed = name?.trim() || "未命名的组";
+      const order = Math.max(-1, ...activeGroups(db).map((g) => g.order)) + 1;
+      const group = createGroup(db.deviceId, trimmed, order);
+      commit((d) => ({
+        ...d,
+        groups: [...d.groups, group],
+        settings: {
+          ...d.settings,
+          collapsedGroups: (d.settings.collapsedGroups ?? []).filter(
+            (id) => id !== group.id,
+          ),
+        },
+      }));
+      return group.id;
+    },
+
+    renameGroup: (id, name) => {
+      const trimmed = name.trim() || "未命名的组";
+      commit((db) => ({
+        ...db,
+        groups: db.groups.map((g) =>
+          g.id === id ? { ...g, name: trimmed, ...touch(db.deviceId) } : g,
+        ),
+      }));
+    },
+
+    deleteGroup: (id) => {
+      const now = nowMs();
+      commit((d) => {
+        // 只删除分组：列表保留并回到未分组区域，按原组内顺序追加到末尾
+        const moving = d.lists
+          .filter((l) => l.groupId === id && !l.deletedAt)
+          .sort((a, b) => a.order - b.order);
+        let nextOrder =
+          Math.max(
+            -1,
+            ...d.lists
+              .filter((l) => !l.deletedAt && !l.groupId)
+              .map((l) => l.order),
+          ) + 1;
+        const movedOrders = new Map<string, number>();
+        for (const list of moving) movedOrders.set(list.id, nextOrder++);
+
         return {
-          ...db,
-          lists: db.lists.map((l) =>
-            orderMap.has(l.id)
-              ? { ...l, order: orderMap.get(l.id)!, ...touch(db.deviceId) }
+          ...d,
+          groups: d.groups.map((g) =>
+            g.id === id ? { ...g, deletedAt: now, ...touch(d.deviceId) } : g,
+          ),
+          lists: d.lists.map((l) =>
+            movedOrders.has(l.id)
+              ? {
+                  ...l,
+                  groupId: undefined,
+                  order: movedOrders.get(l.id)!,
+                  ...touch(d.deviceId),
+                }
               : l,
           ),
+          settings: {
+            ...d.settings,
+            collapsedGroups: (d.settings.collapsedGroups ?? []).filter(
+              (gid) => gid !== id,
+            ),
+          },
         };
+      });
+    },
+
+    toggleGroupCollapsed: (id) => {
+      commit((db) => {
+        const current = db.settings.collapsedGroups ?? [];
+        const collapsedGroups = current.includes(id)
+          ? current.filter((gid) => gid !== id)
+          : [...current, id];
+        return { ...db, settings: { ...db.settings, collapsedGroups } };
       });
     },
 
@@ -652,6 +746,19 @@ export const useStore = create<StoreState>((set, get) => {
 
     updateSettings: (patch) => {
       commit((db) => ({ ...db, settings: { ...db.settings, ...patch } }), true);
+    },
+
+    setSort: (key, sort) => {
+      commit(
+        (db) => ({
+          ...db,
+          settings: {
+            ...db.settings,
+            sortBy: { ...(db.settings.sortBy ?? {}), [key]: sort },
+          },
+        }),
+        true,
+      );
     },
 
     exportJson: async (path) => {

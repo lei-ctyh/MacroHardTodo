@@ -9,6 +9,56 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{Emitter, Manager};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+#[cfg(windows)]
+#[link(name = "dwmapi")]
+extern "system" {
+    fn DwmSetWindowAttribute(
+        hwnd: isize,
+        attr: u32,
+        pv: *const std::ffi::c_void,
+        cb: u32,
+    ) -> i32;
+}
+
+/// 让 Windows 11 原生标题栏使用与侧栏一致的颜色。
+/// COLORREF 的字节序是 0x00BBGGRR。
+#[cfg(windows)]
+fn apply_caption_theme(window: &tauri::WebviewWindow, dark: bool) {
+    const DWMWA_CAPTION_COLOR: u32 = 35;
+    const DWMWA_TEXT_COLOR: u32 = 36;
+    let (caption, text): (u32, u32) = if dark {
+        (0x0023_2425, 0x00F3_F2F1) // #252423 / #F3F2F1
+    } else {
+        (0x00F3_F3F3, 0x0020_2020) // #F3F3F3 / #202020
+    };
+    if let Ok(hwnd) = window.hwnd() {
+        unsafe {
+            let _ = DwmSetWindowAttribute(
+                hwnd.0 as isize,
+                DWMWA_CAPTION_COLOR,
+                &caption as *const u32 as *const std::ffi::c_void,
+                4,
+            );
+            let _ = DwmSetWindowAttribute(
+                hwnd.0 as isize,
+                DWMWA_TEXT_COLOR,
+                &text as *const u32 as *const std::ffi::c_void,
+                4,
+            );
+        }
+    }
+}
+
+#[tauri::command]
+fn set_titlebar_theme(window: tauri::WebviewWindow, dark: bool) {
+    #[cfg(windows)]
+    apply_caption_theme(&window, dark);
+    #[cfg(not(windows))]
+    {
+        let _ = (window, dark);
+    }
+}
+
 fn show_main(app: &tauri::AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.show();
@@ -74,6 +124,12 @@ pub fn run() {
                         let _ = app.emit("global-quick-add", ());
                     }
                 })?;
+
+            #[cfg(windows)]
+            if let Some(window) = app.get_webview_window("main") {
+                apply_caption_theme(&window, false);
+            }
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -83,6 +139,7 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            set_titlebar_theme,
             storage::load_db,
             storage::save_db,
             storage::data_dir_path,

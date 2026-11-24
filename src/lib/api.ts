@@ -54,6 +54,8 @@ export const api = {
   loadDb: () => invoke<LoadResult>("load_db"),
   saveDb: (db: DB) => invoke<void>("save_db", { db }),
   dataDir: () => invoke<string>("data_dir_path"),
+  setTitleBarTheme: (dark: boolean) =>
+    invoke<void>("set_titlebar_theme", { dark }),
   exportData: (path: string, content: string) =>
     invoke<void>("export_data", { path, content }),
   importData: (path: string) => invoke<string>("import_data", { path }),

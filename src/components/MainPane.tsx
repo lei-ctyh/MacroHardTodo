@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -18,48 +18,50 @@ import { activeLists, activeTasks, type ListTheme, type Task } from "../lib/mode
 import {
   headerInfo,
   searchTasks,
+  sortTasks,
   tasksForView,
+  viewKey,
 } from "../lib/views";
-import { dueLabel, todayISO } from "../lib/dates";
 import {
-  myDayTheme,
   resolveThemeBackground,
+  smartTheme,
   themeFallback,
 } from "../lib/themes";
 import { QuickAdd } from "./QuickAdd";
 import { TaskRow } from "./TaskRow";
 import { ThemePicker, type ThemeTarget } from "./ThemePicker";
 import { SuggestionPanel } from "./SuggestionPanel";
+import { ViewMenu } from "./ViewMenu";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
-  CloseIcon,
   LightbulbIcon,
-  PaletteIcon,
-  PlusSmallIcon,
-  SearchIcon,
-  SunIcon,
+  MoreIcon,
 } from "./icons";
 
 export function MainPane() {
   const db = useStore((s) => s.db);
   const view = useStore((s) => s.view);
   const query = useStore((s) => s.query);
-  const setQuery = useStore((s) => s.setQuery);
   const selectedTaskId = useStore((s) => s.selectedTaskId);
   const selectTask = useStore((s) => s.selectTask);
   const toggleComplete = useStore((s) => s.toggleComplete);
   const toggleImportance = useStore((s) => s.toggleImportance);
   const reorderTasks = useStore((s) => s.reorderTasks);
-  const setMyDay = useStore((s) => s.setMyDay);
   const ensureAttachment = useStore((s) => s.ensureAttachment);
   const focusQuickAdd = useStore((s) => s.focusQuickAdd);
+  const setSort = useStore((s) => s.setSort);
+  const renameList = useStore((s) => s.renameList);
+  const deleteList = useStore((s) => s.deleteList);
 
-  const [searchOpen, setSearchOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
   const [bgUrl, setBgUrl] = useState<string | undefined>();
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const renameCancelled = useRef(false);
 
   const listNames = useMemo(() => {
     const map = new Map<string, string>();
@@ -67,10 +69,12 @@ export function MainPane() {
     return map;
   }, [db]);
 
+  const sort = db.settings.sortBy?.[viewKey(view)] ?? "manual";
   const allForView = useMemo(() => tasksForView(db, view), [db, view]);
+  const sorted = useMemo(() => sortTasks(allForView, sort), [allForView, sort]);
   const visible = useMemo(
-    () => searchTasks(allForView, query),
-    [allForView, query],
+    () => searchTasks(sorted, query),
+    [sorted, query],
   );
   const info = headerInfo(db, view);
   const isMyDay = view.type === "smart" && view.id === "myday";
@@ -88,7 +92,7 @@ export function MainPane() {
   const targetListId =
     view.type === "list" ? view.id : activeLists(db)[0]?.id;
 
-  const sortable = view.type === "list" && !query.trim();
+  const sortable = view.type === "list" && !query.trim() && sort === "manual";
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
@@ -137,15 +141,14 @@ export function MainPane() {
       const list = db.lists.find((l) => l.id === view.id && !l.deletedAt);
       return list ? { type: "list", list } : null;
     }
-    if (view.type === "smart" && view.id === "myday") return { type: "myday" };
-    return null;
+    return { type: "smart", id: view.id };
   }, [db, view]);
 
   const theme: ListTheme | undefined =
     themeTarget?.type === "list"
       ? themeTarget.list.theme
-      : themeTarget?.type === "myday"
-        ? myDayTheme(db)
+      : themeTarget?.type === "smart"
+        ? smartTheme(db, themeTarget.id)
         : undefined;
   const themeKey = JSON.stringify(theme ?? null);
   const hasBanner = Boolean(theme?.preset || theme?.image);
@@ -168,52 +171,39 @@ export function MainPane() {
   useEffect(() => {
     setThemeOpen(false);
     setSuggestOpen(isMyDay);
+    setMenuOpen(false);
+    setRenaming(false);
   }, [view]);
 
   useEffect(() => {
     if (selectedTaskId) setSuggestOpen(false);
   }, [selectedTaskId]);
 
-  const searchControl = searchOpen ? (
-    <div className="search-box">
-      <SearchIcon />
-      <input
-        autoFocus
-        value={query}
-        placeholder="搜索任务"
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") {
-            setQuery("");
-            setSearchOpen(false);
-          }
-        }}
-      />
-      <button
-        className="icon-btn"
-        style={{ width: 24, height: 24 }}
-        onClick={() => {
-          setQuery("");
-          setSearchOpen(false);
-        }}
-        aria-label="关闭搜索"
-      >
-        <CloseIcon />
-      </button>
-    </div>
-  ) : (
-    <button
-      className="icon-btn"
-      onClick={() => setSearchOpen(true)}
-      title="搜索"
-    >
-      <SearchIcon />
-    </button>
-  );
+  const startRename = () => {
+    if (view.type !== "list") return;
+    renameCancelled.current = false;
+    setRenameValue(info.title);
+    setRenaming(true);
+  };
+
+  const cancelRename = () => {
+    renameCancelled.current = true;
+    setRenaming(false);
+  };
+
+  const commitRename = () => {
+    setRenaming(false);
+    if (renameCancelled.current) {
+      renameCancelled.current = false;
+      return;
+    }
+    if (view.type !== "list") return;
+    const trimmed = renameValue.trim();
+    if (trimmed) renameList(view.id, trimmed);
+  };
 
   const actions = (
     <>
-      {searchControl}
       {isMyDay ? (
         <button
           className={`icon-btn ${suggestOpen ? "active" : ""}`}
@@ -228,15 +218,44 @@ export function MainPane() {
           <LightbulbIcon />
         </button>
       ) : null}
-      {themeTarget ? (
+      <div className="menu-wrap">
         <button
-          className="icon-btn"
-          onClick={() => setThemeOpen(true)}
-          title="背景主题"
+          className={`icon-btn ${menuOpen ? "active" : ""}`}
+          title="更多操作"
+          aria-label="更多操作"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => setMenuOpen((open) => !open)}
         >
-          <PaletteIcon />
+          <MoreIcon />
         </button>
-      ) : null}
+        {menuOpen ? (
+          <ViewMenu
+            view={view}
+            list={themeTarget?.type === "list" ? themeTarget.list : undefined}
+            sort={sort}
+            canDelete={activeLists(db).length > 1}
+            onSort={(key) => {
+              setSort(viewKey(view), key);
+              setMenuOpen(false);
+            }}
+            onRename={() => {
+              startRename();
+              setMenuOpen(false);
+            }}
+            onTheme={() => {
+              setThemeOpen(true);
+              setMenuOpen(false);
+            }}
+            onDelete={() => {
+              if (view.type === "list") deleteList(view.id);
+              setMenuOpen(false);
+            }}
+            onClose={() => setMenuOpen(false)}
+          />
+        ) : null}
+      </div>
     </>
   );
 
@@ -253,7 +272,11 @@ export function MainPane() {
     <main className={`main ${hasBanner ? "on-image" : ""}`} style={mainStyle}>
       <div className="main-header">
         <div className="header-text">
-          <div className="main-title">
+          <div
+            className={`main-title ${
+              renaming && view.type === "list" ? "renaming" : ""
+            }`}
+          >
             {theme?.emoji ? (
               <span className="header-emoji">{theme.emoji}</span>
             ) : null}
@@ -268,7 +291,27 @@ export function MainPane() {
                 }}
               />
             ) : null}
-            {info.title}
+            {renaming && view.type === "list" ? (
+              <input
+                className="title-input"
+                autoFocus
+                value={renameValue}
+                aria-label="列表名称"
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitRename();
+                  } else if (e.key === "Escape") {
+                    e.stopPropagation();
+                    cancelRename();
+                  }
+                }}
+              />
+            ) : (
+              info.title
+            )}
           </div>
           <div className="main-subtitle">{subtitle}</div>
         </div>

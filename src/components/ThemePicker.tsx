@@ -1,19 +1,22 @@
 import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { api } from "../lib/api";
-import type { ListTheme, TaskList } from "../lib/model";
+import { LIST_COLORS, type ListTheme, type SmartViewId, type TaskList } from "../lib/model";
+import { headerInfo } from "../lib/views";
 import {
-  MYDAY_THEME_KEY,
   THEME_EMOJIS,
   THEME_PRESETS,
-  myDayTheme,
   presetUrl,
+  smartTheme,
+  smartThemeKey,
 } from "../lib/themes";
 import { useStore } from "../store/useStore";
 import { Modal } from "./Modal";
 import { ImageIcon, InfoIcon, TrashIcon } from "./icons";
 
-export type ThemeTarget = { type: "list"; list: TaskList } | { type: "myday" };
+export type ThemeTarget =
+  | { type: "list"; list: TaskList }
+  | { type: "smart"; id: SmartViewId };
 
 export function ThemePicker({
   target,
@@ -24,22 +27,26 @@ export function ThemePicker({
 }) {
   const db = useStore((s) => s.db);
   const setListTheme = useStore((s) => s.setListTheme);
+  const setListColor = useStore((s) => s.setListColor);
   const setShared = useStore((s) => s.setShared);
 
   const initial =
-    target.type === "list" ? target.list.theme : myDayTheme(db);
+    target.type === "list" ? target.list.theme : smartTheme(db, target.id);
   const [theme, setTheme] = useState<ListTheme | undefined>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const title = target.type === "list" ? `「${target.list.name}」的主题` : "我的一天的主题";
+  const title =
+    target.type === "list"
+      ? `「${target.list.name}」的主题`
+      : `${headerInfo(db, { type: "smart", id: target.id }).title}的主题`;
 
   const apply = (next: ListTheme | undefined) => {
     const cleaned =
       next && (next.preset || next.image || next.emoji) ? next : undefined;
     setTheme(cleaned);
     if (target.type === "list") setListTheme(target.list.id, cleaned);
-    else setShared(MYDAY_THEME_KEY, cleaned ?? null);
+    else setShared(smartThemeKey(target.id), cleaned ?? null);
   };
 
   const pickImage = async () => {
@@ -103,6 +110,24 @@ export function ThemePicker({
     >
       {error ? <div className="status-line error">{error}</div> : null}
 
+      {target.type === "list" ? (
+        <div className="form-row">
+          <label>列表颜色</label>
+          <div className="palette">
+            {LIST_COLORS.map((color) => (
+              <button
+                key={color}
+                className={target.list.color === color ? "active" : ""}
+                style={{ background: color }}
+                onClick={() => setListColor(target.list.id, color)}
+                aria-label={`颜色 ${color}`}
+              />
+            ))}
+          </div>
+          <div className="hint">颜色会显示在侧栏的列表名称前。</div>
+        </div>
+      ) : null}
+
       <div className="form-row">
         <label>图标（emoji）</label>
         <div className="emoji-grid">
@@ -125,7 +150,11 @@ export function ThemePicker({
             </button>
           ))}
         </div>
-        <div className="hint">图标会显示在列表名称旁边和背景标题里。</div>
+        <div className="hint">
+          {target.type === "list"
+            ? "图标会显示在列表名称旁边和背景标题里。"
+            : "图标会显示在视图标题和背景标题里。"}
+        </div>
       </div>
 
       <div className="form-row">

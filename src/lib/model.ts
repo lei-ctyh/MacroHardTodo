@@ -1,5 +1,8 @@
 export type ID = string;
 
+/** 列表排序方式：我的顺序 / 重要 / 截止日期 / 已添加 / 字母顺序 */
+export type SortKey = "manual" | "importance" | "due" | "added" | "alpha";
+
 export const SMART_VIEWS = ["myday", "important", "planned", "tasks", "completed"] as const;
 export type SmartViewId = (typeof SMART_VIEWS)[number];
 
@@ -85,6 +88,20 @@ export interface TaskList {
   color?: string;
   theme?: ListTheme;
   order: number;
+  /** 所属分组；undefined 表示未分组 */
+  groupId?: string;
+  createdAt: number;
+  updatedAt: number;
+  updatedBy?: string;
+  deletedAt?: number;
+  sourceId?: string;
+}
+
+/** 侧栏列表分组：只负责组织列表，删除分组不影响其列表和任务 */
+export interface TaskGroup {
+  id: string;
+  name: string;
+  order: number;
   createdAt: number;
   updatedAt: number;
   updatedBy?: string;
@@ -109,12 +126,19 @@ export interface Settings {
   webdavUser?: string;
   webdavEncrypt?: boolean;
   graphClientId?: string;
+  /** 每个视图各自的排序选择，key 为 `list:<id>` 或 `smart:<id>`；仅本地保存 */
+  sortBy?: Record<string, SortKey>;
+  /** 已折叠的分组 id；仅本地保存 */
+  collapsedGroups: string[];
+  /** 侧栏宽度（px）；仅本地保存 */
+  sidebarWidth?: number;
 }
 
 export interface DB {
   schemaVersion: 1;
   deviceId: string;
   lists: TaskList[];
+  groups: TaskGroup[];
   tasks: Task[];
   shared: Record<string, SharedValue>;
   settings: Settings;
@@ -140,6 +164,9 @@ export const DEFAULT_SETTINGS: Settings = {
   startMinimized: false,
   globalShortcutEnabled: true,
   webdavEncrypt: false,
+  sortBy: {},
+  collapsedGroups: [],
+  sidebarWidth: 240,
 };
 
 export function nowMs(): number {
@@ -172,6 +199,7 @@ export function createDB(deviceId: string): DB {
     schemaVersion: 1,
     deviceId,
     lists: [tasksList],
+    groups: [],
     tasks: [],
     shared: {},
     settings: { ...DEFAULT_SETTINGS },
@@ -220,8 +248,26 @@ export function createStep(deviceId: string, title: string, order: number): Step
   };
 }
 
+export function createGroup(deviceId: string, name: string, order: number): TaskGroup {
+  const now = nowMs();
+  return {
+    id: uid("group"),
+    name,
+    order,
+    createdAt: now,
+    updatedAt: now,
+    updatedBy: deviceId,
+  };
+}
+
 export function activeLists(db: DB): TaskList[] {
   return db.lists.filter((l) => !l.deletedAt).sort((a, b) => a.order - b.order);
+}
+
+export function activeGroups(db: DB): TaskGroup[] {
+  return (db.groups ?? [])
+    .filter((g) => !g.deletedAt)
+    .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 }
 
 export function activeTasks(db: DB): Task[] {

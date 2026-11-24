@@ -15,6 +15,8 @@ MacroHardTodo/
 │   ├── components/           UI components (PascalCase .tsx)
 │   │   ├── Sidebar.tsx
 │   │   ├── MainPane.tsx      header, task list, bottom QuickAdd, theme background
+│   │   ├── ViewMenu.tsx      top-right overflow menu (rename/theme/sort/delete)
+│   │   ├── GroupRow.tsx      sidebar group header (collapse, inline rename, hover menu, droppable)
 │   │   ├── TaskRow.tsx
 │   │   ├── TaskDetail.tsx    right-side detail panel
 │   │   ├── QuickAdd.tsx      fixed bottom add bar
@@ -24,10 +26,10 @@ MacroHardTodo/
 │   │   ├── Modal.tsx         shared dialog shell
 │   │   └── icons.tsx         central lucide re-exports (never import lucide elsewhere)
 │   ├── lib/                  pure TypeScript domain logic (no React imports)
-│   │   ├── model.ts          DB/Task/TaskList/Step/Theme types + factories
-│   │   ├── merge.ts          per-entity LWW merge, tombstones, dedupe
+│   │   ├── model.ts          DB/Task/TaskList/TaskGroup/Step/Theme types + factories
+│   │   ├── merge.ts          per-entity LWW merge, tombstones, dedupe (lists, groups, tasks)
 │   │   ├── recurrence.ts     next-occurrence rules, buildNextTask
-│   │   ├── views.ts          smart views, counts, suggestion groups
+│   │   ├── views.ts          smart views, per-view sorting, counts, suggestion groups, sidebar sections
 │   │   ├── dates.ts          date formatting helpers
 │   │   ├── themes.ts         preset backgrounds, theme image resolution
 │   │   ├── graphImport.ts    Microsoft Graph mapping + idempotent import
@@ -55,6 +57,7 @@ MacroHardTodo/
 - **Tauri commands** are declared in Rust (`src-tauri/src/*.rs`), registered in `lib.rs`, and wrapped once in `src/lib/api.ts`. Components call the `api` object, never `invoke` directly.
 - **UI components** own only local presentation state (open editors, search box, dialog visibility). Persisted/synced state belongs to the store.
 - **Sync transport** (`webdav_*`, `graph_*`) lives in Rust; merge/import decisions stay in TypeScript so they are testable.
+- **Sidebar grouping**: groups are synced entities (`DB.groups`); a list references one via `TaskList.groupId`. Pure section/drag logic lives in `views.ts` (`listSections`, `moveList`), rendering in `Sidebar.tsx` + `GroupRow.tsx`, mutations in the store.
 
 ---
 
@@ -72,4 +75,4 @@ MacroHardTodo/
 
 - Feature slice: `SuggestionPanel.tsx` (UI) + `myDaySuggestionGroups` in `views.ts` (logic) + `setMyDay` in `useStore` (mutation).
 - Sync slice: `src-tauri/src/sync.rs` (transport) + `src/lib/syncClient.ts` (merge/upload) + `tests/merge.test.ts` (unit).
-- Theme slice: `ThemePicker.tsx` (UI) + `themes.ts` (presets/resolution) + `TaskList.theme` / `DB.shared["mydayTheme"]` (data).
+- Theme slice: `ThemePicker.tsx` (UI, every view) + `themes.ts` (presets/resolution, `smartTheme`/`smartThemeKey`) + `TaskList.theme` / `DB.shared["mydayTheme"]` / `DB.shared["theme:<smartId>"]` (data).

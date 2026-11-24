@@ -1,5 +1,5 @@
 import { api } from "./api";
-import type { DB, ListTheme } from "./model";
+import type { DB, ListTheme, SmartViewId } from "./model";
 
 export const MYDAY_THEME_KEY = "mydayTheme";
 
@@ -30,9 +30,18 @@ export function presetUrl(id: string): string {
   return `/backgrounds/${id}.svg`;
 }
 
-export function myDayTheme(db: DB): ListTheme | undefined {
-  const value = db.shared[MYDAY_THEME_KEY]?.value;
+/** 智能视图主题在 db.shared 中的键：我的一天沿用旧键，其余为 `theme:<id>` */
+export function smartThemeKey(id: SmartViewId): string {
+  return id === "myday" ? MYDAY_THEME_KEY : `theme:${id}`;
+}
+
+export function smartTheme(db: DB, id: SmartViewId): ListTheme | undefined {
+  const value = db.shared[smartThemeKey(id)]?.value;
   return (value ?? undefined) as ListTheme | undefined;
+}
+
+export function myDayTheme(db: DB): ListTheme | undefined {
+  return smartTheme(db, "myday");
 }
 
 const imageCache = new Map<string, string>();

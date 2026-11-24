@@ -1,4 +1,10 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   isPermissionGranted,
@@ -6,6 +12,7 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { useStore } from "./store/useStore";
+import { api } from "./lib/api";
 import { Sidebar } from "./components/Sidebar";
 import { MainPane } from "./components/MainPane";
 import { TaskDetail } from "./components/TaskDetail";
@@ -22,7 +29,68 @@ export default function App() {
   const dialog = useStore((s) => s.dialog);
   const selectedTaskId = useStore((s) => s.selectedTaskId);
   const loadWarning = useStore((s) => s.loadWarning);
+  const updateSettings = useStore((s) => s.updateSettings);
   const [warningDismissed, setWarningDismissed] = useState(false);
+
+  const savedSidebarWidth = db.settings.sidebarWidth;
+  const [sidebarWidth, setSidebarWidth] = useState(savedSidebarWidth ?? 240);
+  const resizeDrag = useRef<{ startX: number; startWidth: number } | null>(
+    null,
+  );
+
+  const clampSidebarWidth = (value: number) =>
+    Math.min(420, Math.max(200, Math.round(value)));
+
+  useEffect(() => {
+    if (typeof savedSidebarWidth === "number") {
+      setSidebarWidth(savedSidebarWidth);
+    }
+  }, [savedSidebarWidth]);
+
+  const startSidebarResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    resizeDrag.current = { startX: event.clientX, startWidth: sidebarWidth };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const onMove = (e: PointerEvent) => {
+      if (!resizeDrag.current) return;
+      setSidebarWidth(
+        clampSidebarWidth(
+          resizeDrag.current.startWidth +
+            e.clientX -
+            resizeDrag.current.startX,
+        ),
+      );
+    };
+    const cleanup = () => {
+      resizeDrag.current = null;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", cleanup);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    const onUp = (e: PointerEvent) => {
+      const drag = resizeDrag.current;
+      if (drag) {
+        const width = clampSidebarWidth(
+          drag.startWidth + e.clientX - drag.startX,
+        );
+        setSidebarWidth(width);
+        updateSettings({ sidebarWidth: width });
+      }
+      cleanup();
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", cleanup);
+  };
+
+  const resetSidebarWidth = () => {
+    setSidebarWidth(240);
+    updateSettings({ sidebarWidth: 240 });
+  };
 
   useEffect(() => {
     void useStore.getState().init();
@@ -35,6 +103,9 @@ export default function App() {
     const apply = () => {
       const dark = theme === "dark" || (theme === "system" && mq.matches);
       document.documentElement.dataset.theme = dark ? "dark" : "light";
+      void api.setTitleBarTheme(dark).catch(() => {
+        /* 浏览器预览或非 Windows 环境 */
+      });
     };
     apply();
     mq.addEventListener("change", apply);
@@ -167,8 +238,22 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      style={{ "--sidebar-w": `${sidebarWidth}px` } as CSSProperties}
+    >
       <Sidebar />
+      <div
+        className="sidebar-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-valuemin={200}
+        aria-valuemax={420}
+        aria-valuenow={Math.round(sidebarWidth)}
+        title="拖动调整侧栏宽度，双击恢复默认"
+        onPointerDown={startSidebarResize}
+        onDoubleClick={resetSidebarWidth}
+      />
       <MainPane />
       {selectedTaskId ? <TaskDetail /> : null}
 

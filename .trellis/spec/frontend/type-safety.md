@@ -12,7 +12,7 @@
 
 ## Type Organization
 
-- **Domain types**: `src/lib/model.ts` (`DB`, `Task`, `TaskList`, `Step`, `Attachment`, `ListTheme`, `RecurrenceRule`, `Settings`). Single source of truth.
+- **Domain types**: `src/lib/model.ts` (`DB`, `Task`, `TaskList`, `TaskGroup`, `Step`, `Attachment`, `ListTheme`, `RecurrenceRule`, `SortKey`, `Settings`). Single source of truth.
 - **View union**: `View = { type: "smart"; id: SmartViewId } | { type: "list"; id: string }` in `src/lib/views.ts`.
 - **Graph payloads**: `GraphTaskRaw`, `GraphListRaw`, `GraphDateTime` in `src/lib/graphImport.ts`; mapping functions narrow them.
 - **API results**: `src/lib/api.ts` declares return types for every `invoke` (`LoadResult`, `WebdavDownloadResult`, `GraphTokenResult`, …).
@@ -36,7 +36,7 @@ When adding a new persisted field, update `normalizeDb` (and `DEFAULT_SETTINGS`/
 ## Common Patterns
 
 - Patch objects: `updateTask(id, patch: Partial<Task>)`; the store adds `updatedAt`/`updatedBy`.
-- Discriminated unions for views and theme targets (`ThemeTarget = { type: "list"; list } | { type: "myday" }`).
+- Discriminated unions for views and theme targets (`ThemeTarget = { type: "list"; list: TaskList } | { type: "smart"; id: SmartViewId }`).
 - `Record<string, T>` for keyed maps; convert arrays to `Map` for lookups in `useMemo`.
 - Type guards at parse points: `typeof value === "string"`, `Array.isArray(...)`.
 - Rust command args are camelCase from JS (`relPath`, `ifMatch`, `clientId`) and snake_case in Rust; serde renames where needed (`#[serde(rename_all = "camelCase")]`).

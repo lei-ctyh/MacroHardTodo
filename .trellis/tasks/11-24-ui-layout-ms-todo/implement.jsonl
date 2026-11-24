@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend stack, pre-development checklist, and quality commands for this UI refactor"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Component patterns for the new ViewMenu and the MainPane/Sidebar header changes"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Where view/query/settings state lives and how setSort should persist"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Typing SortKey, Settings.sortBy, and component props"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Placement of the new ViewMenu component and sort helper"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Required validation commands and forbidden patterns"}

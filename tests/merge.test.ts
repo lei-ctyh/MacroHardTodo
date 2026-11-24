@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { mergeDB, fingerprint } from "../src/lib/merge";
-import { DEFAULT_SETTINGS, type DB, type Task } from "../src/lib/model";
+import {
+  DEFAULT_SETTINGS,
+  type DB,
+  type Task,
+  type TaskGroup,
+  type TaskList,
+} from "../src/lib/model";
 
 const now = Date.now();
 
@@ -22,23 +28,44 @@ function task(over: Partial<Task>): Task {
   };
 }
 
-function db(deviceId: string, tasks: Task[]): DB {
+function list(over: Partial<TaskList> = {}): TaskList {
+  return {
+    id: "l1",
+    name: "任务",
+    order: 0,
+    createdAt: now - 5000,
+    updatedAt: now - 5000,
+    updatedBy: "A",
+    ...over,
+  };
+}
+
+function group(over: Partial<TaskGroup> = {}): TaskGroup {
+  return {
+    id: "g1",
+    name: "工作",
+    order: 0,
+    createdAt: now - 5000,
+    updatedAt: now - 4000,
+    updatedBy: "A",
+    ...over,
+  };
+}
+
+function db(
+  deviceId: string,
+  tasks: Task[],
+  over: Partial<DB> = {},
+): DB {
   return {
     schemaVersion: 1,
     deviceId,
-    lists: [
-      {
-        id: "l1",
-        name: "任务",
-        order: 0,
-        createdAt: now - 5000,
-        updatedAt: now - 5000,
-        updatedBy: deviceId,
-      },
-    ],
+    lists: [list()],
+    groups: [],
     tasks,
     shared: {},
     settings: { ...DEFAULT_SETTINGS },
+    ...over,
   };
 }
 
@@ -142,5 +169,52 @@ describe("mergeDB", () => {
     const a = db("A", [task({ id: "t1" }), task({ id: "t2" })]);
     const b = db("A", [task({ id: "t2" }), task({ id: "t1" })]);
     expect(fingerprint(a)).toBe(fingerprint(b));
+  });
+
+  it("分组按 updatedAt 取较新者", () => {
+    const local = db("A", [], {
+      groups: [group({ name: "旧名称", updatedAt: now - 1000 })],
+    });
+    const remote = db("B", [], {
+      groups: [group({ name: "新名称", updatedAt: now, updatedBy: "B" })],
+    });
+    const merged = mergeDB(local, remote).db;
+    expect(merged.groups[0].name).toBe("新名称");
+  });
+
+  it("分组删除墓碑不会被旧数据复活", () => {
+    const local = db("A", [], { groups: [group()] });
+    const remote = db("B", [], {
+      groups: [group({ deletedAt: now, updatedAt: now, updatedBy: "B" })],
+    });
+    const merged = mergeDB(local, remote).db;
+    expect(merged.groups[0].deletedAt).toBeTruthy();
+  });
+
+  it("过期的分组墓碑会被清理", () => {
+    const old = now - 61 * 86400000;
+    const local = db("A", [], {
+      groups: [group({ deletedAt: old, updatedAt: old, updatedBy: "B" })],
+    });
+    const merged = mergeDB(local, db("B", [])).db;
+    expect(merged.groups).toHaveLength(0);
+  });
+
+  it("列表的 groupId 随列表实体一起合并", () => {
+    const local = db("A", [], {
+      groups: [group()],
+      lists: [list({ groupId: "g1", updatedAt: now, updatedBy: "A" })],
+    });
+    const remote = db("B", [], {
+      lists: [list({ updatedAt: now - 1000, updatedBy: "B" })],
+    });
+    const merged = mergeDB(local, remote).db;
+    expect(merged.lists[0].groupId).toBe("g1");
+  });
+
+  it("分组变化会反映在指纹中", () => {
+    const a = db("A", [], { groups: [group({ name: "工作" })] });
+    const b = db("A", [], { groups: [group({ name: "生活" })] });
+    expect(fingerprint(a)).not.toBe(fingerprint(b));
   });
 });

@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Verify tests, type-check, build, and UI regression requirements"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "Check SortKey/Settings typing and absence of unsafe casts"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Check component composition and props conventions in ViewMenu/MainPane/Sidebar"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "Check that sort state persists correctly and components do not mutate store state"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Check reuse of existing menu, modal, theme, and icon patterns"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Check consistency across settings, views, and rendering layers"}

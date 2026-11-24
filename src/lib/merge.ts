@@ -3,6 +3,7 @@ import {
   type DB,
   type Step,
   type Task,
+  type TaskGroup,
   type TaskList,
 } from "./model";
 
@@ -126,6 +127,9 @@ export function mergeDB(local: DB, remote: DB): MergeOutcome {
   const lists: TaskList[] = sortByOrder(
     purgeTombstones(mergeEntities(local.lists ?? [], remote.lists ?? []), now),
   );
+  const groups: TaskGroup[] = sortByOrder(
+    purgeTombstones(mergeEntities(local.groups ?? [], remote.groups ?? []), now),
+  );
   const tasks = sortByOrder(
     purgeTombstones(dedupeOccurrences(mergeTasks(local.tasks ?? [], remote.tasks ?? [])), now),
   );
@@ -135,6 +139,7 @@ export function mergeDB(local: DB, remote: DB): MergeOutcome {
     schemaVersion: 1,
     deviceId: local.deviceId,
     lists,
+    groups,
     tasks,
     shared,
     settings: local.settings,
@@ -147,6 +152,7 @@ export function mergeDB(local: DB, remote: DB): MergeOutcome {
 export function fingerprint(db: DB): string {
   return JSON.stringify({
     lists: [...db.lists].sort((a, b) => a.id.localeCompare(b.id)),
+    groups: [...(db.groups ?? [])].sort((a, b) => a.id.localeCompare(b.id)),
     tasks: [...db.tasks]
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((t) => ({

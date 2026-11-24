@@ -24,6 +24,7 @@ export {
   Repeat as RepeatIcon,
   ChevronRight as ChevronRightIcon,
   ChevronDown as ChevronDownIcon,
+  ArrowUpDown as SortIcon,
   Copy as CopyIcon,
   Cloud as CloudIcon,
   RefreshCw as SyncIcon,
@@ -45,4 +46,31 @@ export {
 
 export function StarFilledIcon(props: LucideProps) {
   return <Star {...props} fill="currentColor" strokeWidth={1.5} />;
+}
+
+/**
+ * 创建新组：圆角方框 + 右上角加号 + 左侧竖线。
+ * 原创线性图标，形状参考 Fluent 的“新建组”，不包含微软素材。
+ */
+export function NewGroupIcon(props: LucideProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <path d="M9 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3" />
+      <path d="M9 9v6" />
+      <path d="M18 3v5" />
+      <path d="M15.5 5.5h5" />
+    </svg>
+  );
 }

@@ -17,6 +17,16 @@ const setMyDay = useStore((s) => s.setMyDay);
 ```
 
 - Do not subscribe to the whole store object and destructure; it re-renders on every keystroke.
+- Sidebar layout follows Microsoft To Do: brand → always-visible search → smart views → ungrouped lists → group sections → inline new-list input; the footer pairs `新建列表` with an icon-only `创建新组` button, while 同步/设置 live in the account dropdown opened from the brand.
+- The sidebar is resizable via `.sidebar-resizer` (clamped 200–420px, persisted in `settings.sidebarWidth`, double-click resets to 240). Selected nav rows use an inset `::before` highlight (2px vertical, 3px radius) with the accent bar in `::after` (3×16px, `--nav-accent`).
+- Sidebar counts use `.sidebar .nav-count` badges (20px circle/pill, radius 10px, `--nav-badge` / `--nav-badge-text`); the suggestion panel's count stays plain text.
+- The app theme effect also calls `api.setTitleBarTheme(dark)` so the native Windows caption color (`#F3F3F3` / `#252423`) stays in sync with the sidebar.
+- Group headers are `GroupRow`: chevron collapse, name (double-click or menu → inline rename), hover `MoreIcon` menu (重命名 / 删除组). Group actions never live on individual list rows.
+- Deleting a group only removes the group; its lists return to the ungrouped section and keep their tasks.
+- One `DndContext` wraps the whole list area. Each section (ungrouped + every group) has its own `SortableContext`; group headers and the ungrouped drop zone are `group:<id>` / `group:ungrouped` droppables. Group headers themselves are not draggable — group order is creation order.
+- Section building and drag resolution are pure helpers (`listSections`, `moveList` in `views.ts`); keep components free of that logic.
+- The content header has exactly one `ViewMenu` (`MoreIcon`) per view. My Day additionally keeps the suggestion (lightbulb) button; do not re-add header search or palette icons.
+- Every view has a theme (emoji/background; lists also have a color): lists store `list.theme`, smart views store theirs in `db.shared` (`mydayTheme` for My Day, `theme:<smartId>` for the rest); all of it is edited in `ThemePicker`, opened from `ViewMenu`. List identity is edited there too; list management lives in `ViewMenu`, not in sidebar rows.
 
 ---
 
