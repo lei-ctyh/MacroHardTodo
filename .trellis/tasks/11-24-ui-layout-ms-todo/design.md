@@ -309,12 +309,12 @@ footer: [ + 新建列表 ][ □+ 创建新组 ]
 
 ## Group Rows
 
-- Group header: 20px group glyph on the left (rounded square + inner line), name, and a collapse chevron on the right (up when expanded, down when collapsed). Height 40px, hover uses `--nav-hover`. No `...` button.
+- Group header: 20px group glyph on the left (rounded square + inner line), name (14px, weight 400, `--text`), and a collapse chevron on the right (up when expanded, down when collapsed). Icon/caret stay `--text-secondary`. Height 40px, hover uses `--nav-hover`. No `...` button.
 - Right-clicking the header opens a fixed-position context menu at the cursor: 重命名组 / 新建列表, then a separator. Empty groups show 删除组 (danger, `Delete` hint); non-empty groups show 取消分组列表 (keeps lists, removes the group). `Delete` only triggers for empty groups while the menu is open.
 - 新建列表 creates a custom list via `addList("无标题列表", groupId)`, expands the group, and selects the new list. Lists without an emoji render a 16px list-lines glyph tinted with `list.color` (accent default).
 - The whole `group-section` is the `group:<id>` droppable, so empty groups can receive a drag anywhere in the section.
-- Empty expanded groups render `.group-empty` (indented 49px, 2px vertical line + `拖到此处来添加列表`).
-- Group lists are indented ~37px relative to top-level list icons, with the icon slightly right of the group name (`.group-lists .nav-item` padding-left 49px); the default 任务 list is not groupable.
+- Empty expanded groups render `.group-empty` at the list level (padding-left 38px, gap 17px, 2×20px line near the list icon + text between the list icon and name, `拖到此处来添加列表`).
+- Group lists use `.group-lists .nav-item` padding-left 32px and gap 26px, so the icon sits 20px right of the group icon and the name 36px right of the group name; the active accent bar is at `left: 29px` (3px left of the list icon).
 
 ## Trade-offs
 

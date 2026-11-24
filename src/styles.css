@@ -419,9 +419,9 @@ select {
   height: 40px;
   padding: 0 6px 0 12px;
   border-radius: var(--radius);
-  color: var(--text-secondary);
+  color: var(--text);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
   transition: background 0.12s ease;
 }
@@ -475,7 +475,7 @@ select {
   flex: 1;
   min-width: 0;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 400;
   padding: 3px 4px;
   border: 1px solid var(--accent);
   border-radius: 4px;
@@ -500,9 +500,9 @@ select {
 .group-empty {
   display: flex;
   align-items: center;
-  gap: 30px;
+  gap: 17px;
   height: 36px;
-  padding-left: 49px;
+  padding-left: 38px;
   color: var(--text-tertiary);
   font-size: 13px;
   user-select: none;
@@ -517,7 +517,12 @@ select {
 }
 
 .group-lists .nav-item {
-  padding-left: 49px;
+  padding-left: 32px;
+  gap: 26px;
+}
+
+.group-lists .nav-item.active::after {
+  left: 29px;
 }
 
 .group-drop-zone {
