@@ -160,66 +160,66 @@ export interface ThemeColor {
 export const THEME_COLORS: ThemeColor[] = [
   {
     name: "蓝",
-    value: "linear-gradient(135deg, #8fa8e6 0%, #6c8cd5 55%, #5477c2 100%)",
+    value: "linear-gradient(135deg, #7d97dd 0%, #6c8cd5 50%, #5f7dc6 100%)",
   },
   {
     name: "紫",
-    value: "linear-gradient(135deg, #c49bd0 0%, #a66bb5 55%, #8a4f9a 100%)",
+    value: "linear-gradient(135deg, #b47fc2 0%, #a66bb5 50%, #965ca5 100%)",
   },
   {
     name: "玫红",
-    value: "linear-gradient(135deg, #e091a8 0%, #d16a8a 55%, #b45272 100%)",
+    value: "linear-gradient(135deg, #dc7f9b 0%, #d16a8a 50%, #c05677 100%)",
   },
   {
     name: "红",
-    value: "linear-gradient(135deg, #d98484 0%, #c85a5a 55%, #a84646 100%)",
+    value: "linear-gradient(135deg, #d46d6d 0%, #c85a5a 50%, #b84a4a 100%)",
   },
   {
     name: "绿",
-    value: "linear-gradient(135deg, #6aa884 0%, #4a8a64 55%, #386b4d 100%)",
+    value: "linear-gradient(135deg, #589a73 0%, #4a8a64 50%, #3e7a57 100%)",
   },
   {
     name: "青",
-    value: "linear-gradient(135deg, #5aa8a4 0%, #3a8a86 55%, #2c6a67 100%)",
+    value: "linear-gradient(135deg, #479995 0%, #3a8a86 50%, #317774 100%)",
   },
   {
     name: "灰",
-    value: "linear-gradient(135deg, #94a2af 0%, #7a8a99 55%, #5f6d7a 100%)",
+    value: "linear-gradient(135deg, #8797a5 0%, #7a8a99 50%, #6c7c8a 100%)",
   },
   {
     name: "浅蓝",
     light: true,
-    value: "linear-gradient(135deg, #e2ebfa 0%, #c8d8f0 55%, #adc3e3 100%)",
+    value: "linear-gradient(135deg, #d3e0f5 0%, #c8d8f0 50%, #b9cde8 100%)",
   },
   {
     name: "淡紫",
     light: true,
-    value: "linear-gradient(135deg, #f0eafa 0%, #e0d6f0 55%, #cbbfdf 100%)",
+    value: "linear-gradient(135deg, #e8e0f5 0%, #e0d6f0 50%, #d4c8e8 100%)",
   },
   {
     name: "浅粉",
     light: true,
-    value: "linear-gradient(135deg, #faeaf0 0%, #f0d6e0 55%, #dcbdcb 100%)",
+    value: "linear-gradient(135deg, #f5e2e9 0%, #f0d6e0 50%, #e6c8d4 100%)",
   },
   {
     name: "杏",
     light: true,
-    value: "linear-gradient(135deg, #faece2 0%, #f0d6c8 55%, #dcbcaa 100%)",
+    value: "linear-gradient(135deg, #f5e2d7 0%, #f0d6c8 50%, #e6c8b8 100%)",
   },
   {
     name: "薄荷",
     light: true,
-    value: "linear-gradient(135deg, #eafaf4 0%, #d6f0e6 55%, #b8dccb 100%)",
+    value: "linear-gradient(135deg, #e0f5ee 0%, #d6f0e6 50%, #c8e6da 100%)",
   },
   {
     name: "浅青",
     light: true,
-    value: "linear-gradient(135deg, #e6f5f5 0%, #d0e8e8 55%, #b2d2d2 100%)",
+    value: "linear-gradient(135deg, #dcefef 0%, #d0e8e8 50%, #c0dede 100%)",
   },
   {
     name: "浅灰",
     light: true,
-    value: "linear-gradient(135deg, #f4f4f4 0%, #e8e8e8 55%, #d2d2d2 100%)",
+    value: "linear-gradient(135deg, #f0f0f0 0%, #e8e8e8 50%, #dcdcdc 100%)",
   },
 ];
 
