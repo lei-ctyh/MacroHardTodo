@@ -23,6 +23,7 @@ export {
   X as CloseIcon,
   X as CloseSmallIcon,
   MoreHorizontal as MoreIcon,
+  Menu as MenuIcon,
   Trash2 as TrashIcon,
   Paperclip as AttachIcon,
   Bell as BellIcon,

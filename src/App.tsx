@@ -19,18 +19,22 @@ import { TaskDetail } from "./components/TaskDetail";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { SyncDialog } from "./components/SyncDialog";
 import { MigrationWizard } from "./components/MigrationWizard";
-import { CloseSmallIcon, WarningIcon } from "./components/icons";
+import { CloseSmallIcon, MenuIcon, WarningIcon } from "./components/icons";
 
 const notified = new Set<string>();
+const NARROW_QUERY = "(max-width: 760px)";
 
 export default function App() {
   const ready = useStore((s) => s.ready);
   const db = useStore((s) => s.db);
   const dialog = useStore((s) => s.dialog);
+  const view = useStore((s) => s.view);
   const selectedTaskId = useStore((s) => s.selectedTaskId);
   const loadWarning = useStore((s) => s.loadWarning);
   const updateSettings = useStore((s) => s.updateSettings);
   const [warningDismissed, setWarningDismissed] = useState(false);
+  const [narrow, setNarrow] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const savedSidebarWidth = db.settings.sidebarWidth;
   const [sidebarWidth, setSidebarWidth] = useState(savedSidebarWidth ?? 240);
@@ -96,6 +100,23 @@ export default function App() {
     void useStore.getState().init();
   }, []);
 
+  // 窄窗口：侧栏收起为抽屉
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW_QUERY);
+    const apply = () => {
+      setNarrow(mq.matches);
+      if (!mq.matches) setSidebarOpen(false);
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  // 切换视图后收起抽屉
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [view]);
+
   // 主题
   useEffect(() => {
     const theme = db.settings.theme;
@@ -135,13 +156,17 @@ export default function App() {
         useStore.getState().focusQuickAdd();
       }
       if (e.key === "Escape") {
+        if (sidebarOpen) {
+          setSidebarOpen(false);
+          return;
+        }
         const st = useStore.getState();
         if (!st.dialog) st.selectTask(null);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [sidebarOpen]);
 
   // 提醒
   useEffect(() => {
@@ -239,10 +264,17 @@ export default function App() {
 
   return (
     <div
-      className="app-shell"
+      className={`app-shell ${sidebarOpen ? "sidebar-open" : ""}`}
       style={{ "--sidebar-w": `${sidebarWidth}px` } as CSSProperties}
     >
       <Sidebar />
+      {narrow && sidebarOpen ? (
+        <div
+          className="sidebar-scrim"
+          aria-hidden
+          onClick={() => setSidebarOpen(false)}
+        />
+      ) : null}
       <div
         className="sidebar-resizer"
         role="separator"
@@ -254,7 +286,7 @@ export default function App() {
         onPointerDown={startSidebarResize}
         onDoubleClick={resetSidebarWidth}
       />
-      <MainPane />
+      <MainPane onOpenSidebar={() => setSidebarOpen(true)} narrow={narrow} />
       {selectedTaskId ? <TaskDetail /> : null}
 
       {dialog === "settings" ? <SettingsDialog /> : null}

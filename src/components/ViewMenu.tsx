@@ -1,4 +1,16 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  autoUpdate,
+  flip,
+  offset,
+  safePolygon,
+  shift,
+  useClick,
+  useFloating,
+  useFocus,
+  useHover,
+  useInteractions,
+} from "@floating-ui/react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { api } from "../lib/api";
 import {
@@ -70,6 +82,29 @@ export function ViewMenu({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const {
+    refs: submenuRefs,
+    floatingStyles,
+    context,
+  } = useFloating({
+    open: sortOpen,
+    onOpenChange: setSortOpen,
+    placement: "left-start",
+    middleware: [
+      offset(12),
+      flip({ padding: 8, fallbackPlacements: ["right-start"] }),
+      shift({ padding: 8 }),
+    ],
+    whileElementsMounted: autoUpdate,
+  });
+  const hover = useHover(context, { handleClose: safePolygon() });
+  const click = useClick(context);
+  const focus = useFocus(context);
+  const { getReferenceProps, getFloatingProps } = useInteractions([
+    hover,
+    click,
+    focus,
+  ]);
 
   const isList = view.type === "list";
   const showListActions = isList && !fixed;
@@ -152,16 +187,14 @@ export function ViewMenu({
       ref={ref}
       role="menu"
       aria-label={list ? `${list.name} 菜单` : "视图菜单"}
-      onMouseLeave={() => setSortOpen(false)}
     >
       <div className="menu main-menu-panel">
         <button
+          ref={submenuRefs.setReference}
           role="menuitem"
           aria-haspopup="menu"
           aria-expanded={sortOpen}
-          onMouseEnter={() => setSortOpen(true)}
-          onFocus={() => setSortOpen(true)}
-          onClick={() => setSortOpen(true)}
+          {...getReferenceProps()}
         >
           <SortIcon /> 排序依据
           <span className="menu-caret">
@@ -298,24 +331,33 @@ export function ViewMenu({
       </div>
 
       {sortOpen ? (
-        <div className="menu sort-flyout" role="menu" aria-label="排序依据">
-          {SORT_OPTIONS.map((option) => {
-            const Icon = SORT_ICONS[option.key];
-            const active = sort === option.key;
-            return (
-              <button
-                key={option.key}
-                role="menuitemradio"
-                aria-checked={active}
-                className={active ? "active" : ""}
-                onClick={() => onSort(option.key)}
-              >
-                <Icon />
-                <span>{option.label}</span>
-                {active ? <CheckIcon className="sort-check" /> : null}
-              </button>
-            );
-          })}
+        <div
+          ref={submenuRefs.setFloating}
+          style={floatingStyles}
+          className="menu sort-flyout"
+          role="menu"
+          aria-label="排序依据"
+          {...getFloatingProps()}
+        >
+          <div className="sort-flyout-inner">
+            {SORT_OPTIONS.map((option) => {
+              const Icon = SORT_ICONS[option.key];
+              const active = sort === option.key;
+              return (
+                <button
+                  key={option.key}
+                  role="menuitemradio"
+                  aria-checked={active}
+                  className={active ? "active" : ""}
+                  onClick={() => onSort(option.key)}
+                >
+                  <Icon />
+                  <span>{option.label}</span>
+                  {active ? <CheckIcon className="sort-check" /> : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
       ) : null}
     </div>

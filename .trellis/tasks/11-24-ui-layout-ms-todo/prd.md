@@ -75,6 +75,9 @@ Make navigation, search, and top-right actions mirror Microsoft To Do so the app
 - [ ] The top-right menu opens a wide main panel; 排序依据 opens a right-side flyout with icons and the active check; the theme grid (colors/images) applies without closing; custom lists keep 重命名/删除列表.
 - [ ] The theme grid has a `+` tile that uploads a background image; a custom image renders as an active extra tile with a hover/focus top-right delete that removes the image; preset/color/无 tiles have no delete.
 - [ ] Light gradients (浅蓝/淡紫/浅粉/杏/薄荷/浅青/浅灰) render dark titles/date/header actions/empty-state/suggestion text/scrollbar; the 7 mid gradients keep white title text.
+- [ ] System-view empty states show illustrations; color themes have no frosted box, while preset/custom-image themes wrap the illustration/text in a dark blurred box.
+- [ ] At ≤760px the sidebar is hidden behind a top-left hamburger and opens as a scrim-backed drawer; it closes on outside click/Escape/view change; the suggestion/detail overlay instead of squeezing the main; Tauri minimum width is 520.
+- [ ] Opening/closing the sort submenu leaves the primary menu's position unchanged; the submenu flips/shifts independently to stay in view.
 - [ ] `npm test` and `npx tsc --noEmit` pass.
 
 ## List Groups (added 2026-11-24)
@@ -129,6 +132,9 @@ Make navigation, search, and top-right actions mirror Microsoft To Do so the app
 - R40: The theme grid's dashed `+` tile uploads a local background image (Tauri image dialog → attachment copy → theme image). A custom image appears as an extra tile before the `+`; it is active and shows a top-right delete button on hover/focus. Deleting clears the custom image (and preset/color) while preserving a custom list's existing emoji; preset/color/无 tiles have no delete affordance.
 - R41: The separate list color feature is removed: `TaskList.color`, `setListColor`, the sidebar color tint, and the title color dot are gone. The former palette becomes `THEME_COLORS` (14 named CSS gradients) and `ListTheme.color` stores the gradient; the MainPane renders it as the page background.
 - R42: `ThemeColor.light` marks the 7 light gradients. Their pages add `on-light`, switching the title, subtitle, header actions, empty state, suggestion title, and scrollbar to dark text/controls (like the reference's mint My Day page); the 7 mid colors keep the white on-image treatment.
+- R43: System-view empty states show an illustration: My Day keeps its WelcomeCard art; the other smart views, the default 任务, and custom lists show an app-style empty illustration (a slightly tilted white paper with the view's accent header, a floating view badge (sun/star/calendar/infinity/check/house/list), and two accent sparkles) above the title/hint. Color/gradient themes render the illustration/title/hint directly on the background with no frosted box; image/preset themes add a dark blurred translucent box (`on-photo`: `rgba(0,0,0,.32)` + blur). Light color themes use dark text.
+- R44: At window widths ≤760px the sidebar becomes a drawer: the sidebar/resizer are hidden, the content header shows a top-left hamburger above the title, and clicking it opens a fixed 320px/84vw sidebar over a dark scrim. Outside click, Escape, or selecting a view closes it. My Day's suggestion defaults closed in this mode. At ≤1100px the suggestion and task-detail panels become fixed right overlays instead of shrinking the main. The Tauri minimum width drops from 880 to 520 so the breakpoint is reachable (restart the running dev app for the native minimum to change).
+- R45: The sort submenu is an independent floating layer anchored to the 排序依据 row (Floating UI `useFloating` with `offset`/`flip`/`shift`), not a flex sibling of the main panel. Opening/closing it never reflows or moves the primary menu; when there is no room to the right it flips to the left of the menu (or shifts into view).
 
 ## Out of Scope
 

@@ -21,6 +21,7 @@ import {
   sortTasks,
   tasksForView,
   viewKey,
+  type View,
 } from "../lib/views";
 import {
   resolveThemeBackground,
@@ -40,6 +41,7 @@ import {
   HomeIcon,
   LightbulbIcon,
   ListLinesIcon,
+  MenuIcon,
   MoreIcon,
   StarOutlineIcon,
   SunIcon,
@@ -53,7 +55,13 @@ const SMART_TITLE_ICONS = {
   completed: CompletedIcon,
 } as const;
 
-export function MainPane() {
+export function MainPane({
+  onOpenSidebar,
+  narrow,
+}: {
+  onOpenSidebar?: () => void;
+  narrow?: boolean;
+}) {
   const db = useStore((s) => s.db);
   const view = useStore((s) => s.view);
   const query = useStore((s) => s.query);
@@ -158,6 +166,7 @@ export function MainPane() {
     view.type === "list" ? listForTheme?.theme : smartTheme(db, view.id);
   const themeKey = JSON.stringify(theme ?? null);
   const hasBanner = Boolean(theme?.preset || theme?.image || theme?.color);
+  const themePhoto = Boolean(theme?.preset || theme?.image);
   const themeLight = theme?.color
     ? (THEME_COLORS.find((c) => c.value === theme.color)?.light ?? false)
     : false;
@@ -178,10 +187,10 @@ export function MainPane() {
   }, [themeKey, ensureAttachment]);
 
   useEffect(() => {
-    setSuggestOpen(isMyDay);
+    setSuggestOpen(isMyDay && !narrow);
     setMenuOpen(false);
     setRenaming(false);
-  }, [view]);
+  }, [view, isMyDay, narrow]);
 
   useEffect(() => {
     if (selectedTaskId) setSuggestOpen(false);
@@ -279,11 +288,21 @@ export function MainPane() {
     <>
     <main
       className={`main ${hasBanner ? "on-image" : ""} ${
-        themeLight ? "on-light" : ""
-      }`}
+        themePhoto ? "on-photo" : ""
+      } ${themeLight ? "on-light" : ""}`}
       style={mainStyle}
     >
       <div className="main-header">
+        {onOpenSidebar ? (
+          <button
+            type="button"
+            className="mobile-sidebar-toggle"
+            aria-label="打开侧边栏"
+            onClick={onOpenSidebar}
+          >
+            <MenuIcon size={20} strokeWidth={1.5} />
+          </button>
+        ) : null}
         <div className="header-text">
           <div
             className={`main-title ${
@@ -354,8 +373,13 @@ export function MainPane() {
           <WelcomeCard onAdd={() => focusQuickAdd()} />
         ) : visible.length === 0 ? (
           <div className="empty-state">
-            <div className="big">{emptyTitle(view.type === "smart" ? view.id : "list")}</div>
-            <div>{emptyHint(view.type === "smart" ? view.id : "list")}</div>
+            <div className="empty-inner">
+              <div className="empty-art" aria-hidden>
+                <EmptyIllustration view={view} />
+              </div>
+              <div className="big">{emptyTitle(view.type === "smart" ? view.id : "list")}</div>
+              <div>{emptyHint(view.type === "smart" ? view.id : "list")}</div>
+            </div>
           </div>
         ) : null}
 
@@ -435,6 +459,39 @@ function WelcomeCard({ onAdd }: { onAdd: () => void }) {
   );
 }
 
+function EmptyIllustration({ view }: { view: View }) {
+  const Icon =
+    view.type === "smart"
+      ? SMART_TITLE_ICONS[view.id]
+      : view.id === DEFAULT_LIST_ID
+        ? HomeIcon
+        : ListLinesIcon;
+  const accent =
+    view.type === "smart"
+      ? view.id === "myday"
+        ? "var(--accent)"
+        : view.id === "all" || view.id === "completed"
+          ? "var(--smart-red)"
+          : "var(--text-secondary)"
+      : view.id === DEFAULT_LIST_ID
+        ? "var(--text-secondary)"
+        : "var(--accent)";
+  return (
+    <div className="empty-illustration">
+      <div className="empty-paper">
+        <div className="empty-paper-bar" style={{ background: accent }} />
+        <div className="empty-paper-line" />
+        <div className="empty-paper-line short" />
+      </div>
+      <div className="empty-badge" style={{ color: accent }}>
+        <Icon size={22} strokeWidth={1.5} />
+      </div>
+      <span className="empty-spark spark-a" style={{ background: accent }} />
+      <span className="empty-spark spark-b" style={{ background: accent }} />
+    </div>
+  );
+}
+
 function SortableTaskRow(
   props: ComponentProps<typeof TaskRow>,
 ) {
@@ -473,11 +530,13 @@ function emptyHint(id: string): string {
     case "myday":
       return "从下面的建议中添加，或在任务详情里点击「我的一天」";
     case "important":
-      return "在任务右侧点亮星标，它就会出现在这里";
+      return "尝试为一些任务加星标，以便在此处查看它们。";
     case "planned":
-      return "给任务设置截止日期或提醒后，会按时间出现在这里";
+      return "此处显示带有截止日期或提醒的任务。";
     case "completed":
       return "完成的任务会保留在这里";
+    case "all":
+      return "所有未完成的任务都会显示在此处。";
     default:
       return "在上方输入框里输入内容，按 Enter 即可添加";
   }
