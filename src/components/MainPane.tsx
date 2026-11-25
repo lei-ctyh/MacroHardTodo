@@ -14,7 +14,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useStore } from "../store/useStore";
-import { activeLists, activeTasks, DEFAULT_LIST_ID, type ListTheme, type Task } from "../lib/model";
+import { activeLists, activeTasks, DEFAULT_LIST_ID, THEME_COLORS, type ListTheme, type Task } from "../lib/model";
 import {
   headerInfo,
   searchTasks,
@@ -29,7 +29,6 @@ import {
 } from "../lib/themes";
 import { QuickAdd } from "./QuickAdd";
 import { TaskRow } from "./TaskRow";
-import { ThemePicker, type ThemeTarget } from "./ThemePicker";
 import { SuggestionPanel } from "./SuggestionPanel";
 import { ViewMenu } from "./ViewMenu";
 import {
@@ -38,6 +37,7 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   CompletedIcon,
+  HomeIcon,
   LightbulbIcon,
   ListLinesIcon,
   MoreIcon,
@@ -69,7 +69,6 @@ export function MainPane() {
   const deleteList = useStore((s) => s.deleteList);
 
   const [showCompleted, setShowCompleted] = useState(false);
-  const [themeOpen, setThemeOpen] = useState(false);
   const [bgUrl, setBgUrl] = useState<string | undefined>();
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -147,22 +146,21 @@ export function MainPane() {
     onToggleStar: () => toggleImportance(task.id),
   });
 
-  const themeTarget: ThemeTarget | null = useMemo(() => {
-    if (view.type === "list") {
-      const list = db.lists.find((l) => l.id === view.id && !l.deletedAt);
-      return list ? { type: "list", list } : null;
-    }
-    return { type: "smart", id: view.id };
-  }, [db, view]);
+  const listForTheme = useMemo(
+    () =>
+      view.type === "list"
+        ? db.lists.find((l) => l.id === view.id && !l.deletedAt)
+        : undefined,
+    [db, view],
+  );
 
   const theme: ListTheme | undefined =
-    themeTarget?.type === "list"
-      ? themeTarget.list.theme
-      : themeTarget?.type === "smart"
-        ? smartTheme(db, themeTarget.id)
-        : undefined;
+    view.type === "list" ? listForTheme?.theme : smartTheme(db, view.id);
   const themeKey = JSON.stringify(theme ?? null);
-  const hasBanner = Boolean(theme?.preset || theme?.image);
+  const hasBanner = Boolean(theme?.preset || theme?.image || theme?.color);
+  const themeLight = theme?.color
+    ? (THEME_COLORS.find((c) => c.value === theme.color)?.light ?? false)
+    : false;
 
   useEffect(() => {
     let alive = true;
@@ -180,7 +178,6 @@ export function MainPane() {
   }, [themeKey, ensureAttachment]);
 
   useEffect(() => {
-    setThemeOpen(false);
     setSuggestOpen(isMyDay);
     setMenuOpen(false);
     setRenaming(false);
@@ -244,20 +241,17 @@ export function MainPane() {
         {menuOpen ? (
           <ViewMenu
             view={view}
-            list={themeTarget?.type === "list" ? themeTarget.list : undefined}
+            list={listForTheme}
             sort={sort}
             canDelete={view.type === "list" && view.id !== DEFAULT_LIST_ID}
             fixed={view.type === "list" && view.id === DEFAULT_LIST_ID}
+            bgUrl={bgUrl}
             onSort={(key) => {
               setSort(viewKey(view), key);
               setMenuOpen(false);
             }}
             onRename={() => {
               startRename();
-              setMenuOpen(false);
-            }}
-            onTheme={() => {
-              setThemeOpen(true);
               setMenuOpen(false);
             }}
             onDelete={() => {
@@ -272,16 +266,23 @@ export function MainPane() {
   );
 
   const mainStyle = hasBanner
-    ? bgUrl
-      ? {
-          backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.28), rgba(0,0,0,0) 150px), url("${bgUrl}")`,
-        }
-      : { background: themeFallback(theme) }
+    ? theme?.color
+      ? { background: theme.color }
+      : bgUrl
+        ? {
+            backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.28), rgba(0,0,0,0) 150px), url("${bgUrl}")`,
+          }
+        : { background: themeFallback(theme) }
     : undefined;
 
   return (
     <>
-    <main className={`main ${hasBanner ? "on-image" : ""}`} style={mainStyle}>
+    <main
+      className={`main ${hasBanner ? "on-image" : ""} ${
+        themeLight ? "on-light" : ""
+      }`}
+      style={mainStyle}
+    >
       <div className="main-header">
         <div className="header-text">
           <div
@@ -290,20 +291,17 @@ export function MainPane() {
             }`}
           >
             <span className="header-title-icon">
-              {theme?.emoji ? (
+              {view.type === "smart" ? (
+                SmartTitleIcon ? (
+                  <SmartTitleIcon size={24} strokeWidth={1.5} />
+                ) : null
+              ) : view.id === DEFAULT_LIST_ID ? (
+                <HomeIcon size={24} strokeWidth={1.5} />
+              ) : theme?.emoji ? (
                 <span className="header-emoji">{theme.emoji}</span>
-              ) : view.type === "list" ? (
-                info.color ? (
-                  <span
-                    className="nav-list-dot"
-                    style={{ background: info.color }}
-                  />
-                ) : (
-                  <ListLinesIcon size={24} strokeWidth={1.5} />
-                )
-              ) : SmartTitleIcon ? (
-                <SmartTitleIcon size={24} strokeWidth={1.5} />
-              ) : null}
+              ) : (
+                <ListLinesIcon size={24} strokeWidth={1.5} />
+              )}
             </span>
             {renaming && view.type === "list" ? (
               <input
@@ -400,9 +398,6 @@ export function MainPane() {
       />
     ) : null}
 
-    {themeOpen && themeTarget ? (
-      <ThemePicker target={themeTarget} onClose={() => setThemeOpen(false)} />
-    ) : null}
     </>
   );
 }

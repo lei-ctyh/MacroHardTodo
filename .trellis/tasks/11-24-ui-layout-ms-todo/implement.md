@@ -17,7 +17,7 @@
    - [ ] Remove the "列表" header `+`; add a "新建列表" action at the sidebar bottom (above 同步/设置) that opens the existing inline input.
    - [ ] Remove the per-list `...` menu (color palette, rename, delete) and its state/props from `SortableListRow`.
    - [ ] Keep drag-and-drop, counts, emoji/color-dot icons, and active state.
-   - [ ] Move the `LIST_COLORS` import to `ThemePicker`.
+   - [ ] Move the `THEME_COLORS` import to `ViewMenu`.
 
 4. **MainPane header + ViewMenu**
    - [ ] Remove `searchOpen`, the search box, and the palette button from the header.
@@ -118,12 +118,32 @@
 
 ## Content Header Title Metrics
 
-- [ ] `styles.css`: `.main-header` padding `40px 32px 6px 44px`; `.main-title` 32px/40px/600; `.header-title-icon` 32×40 + 8px gap; `.header-emoji` 28px; `.task-scroll` padding `10px 56px 60px 64px`; `.quick-add` margin `0 56px 16px 64px`.
+- [ ] `styles.css`: `.main-header` padding `40px 32px 6px 44px`; `.main-title` 32px/40px/600; `.header-title-icon` 32×40 + 8px gap; `.header-emoji` 28px; `.task-scroll` padding `10px 56px 8px 64px`; `.quick-add` margin `16px 66px 16px 64px`.
 - [ ] `MainPane.tsx`: render the fixed icon slot (theme emoji → list color dot/list glyph → smart-view icon via `SMART_TITLE_ICONS`); make `subtitle` My Day-only and render it conditionally.
 - [ ] Verify with CDP: icon x=44, title text x=84, task card x=64 on 计划内 / 任务 / AAA; My Day still shows the date; other views show no count subtitle.
 - [ ] Task-group headers (先前 / 今天 / 稍后) remain out of scope for this pass.
 - [ ] `MainPane.rowProps`: pass the source list name for all smart views, including 已完成, so completed rows show the same meta (`0/1 AAA`, `date AAA`) as the other smart views; list views still omit it.
 - [ ] `styles.css`: move the card surface to `.task-row` globally using `--task-card-bg/border/hover/selected/shadow`; remove all `.main.on-image .task-row`, task text, checkbox, star, drag-handle, and task-scroll overrides. Verify 重要 and 计划内 task rows compute the same card styles.
+- [ ] `styles.css`: give `.task-scroll` a stable thin scrollbar (`scrollbar-gutter: stable`, `scrollbar-width`, `::-webkit-scrollbar` rules, theme-aware thumb), set its bottom padding to 8px, give the QuickAdd a 16px top margin (outside the scroll) and a 66px right margin so it aligns with the cards after the scrollbar gutter. Verify the scrollbar is visible, the scroll/add-bar gap is 16px at the top and bottom, and the last task scrolls fully above the add bar.
+- [ ] `QuickAdd.tsx`: add the `editing` state and replace the always-on input with a normal trigger button + an editing task-card row (checkbox, input, hint); wire click/nonce focus, Enter add, Escape/empty-blur exit.
+- [ ] `styles.css`: add `--quick-add-hover` (#e8eceb light / #333333 dark), the trigger/label/plus styles, the `.quick-add.editing` task-card surface and image-theme overrides; remove the old `:focus-within` blue inset. Verify normal/hover/editing states with CDP.
+
+## Sidebar Sections & Fixed Icons
+
+- [ ] `Sidebar.tsx`: order 我的一天 → 任务 → 重要/计划内/全部/已完成; make the default 任务 row always render `HomeIcon` (ignore its theme emoji).
+- [ ] `MainPane.tsx`: title icon precedence becomes smart fixed icon → default-house → custom-list theme emoji/color/glyph; import `HomeIcon`.
+- [ ] `ViewMenu.tsx`: add `fixedIcon` (smart targets + `DEFAULT_LIST_ID`); show the full theme grid for every view, drop stored/selected emoji for system targets, and keep the custom-image delete; the emoji picker and standalone `ThemePicker` modal are removed.
+- [ ] Verify the sidebar order, fixed sun/star/calendar/infinity/check/house icons in sidebar and title, the planned title no longer showing its stored apple, and the custom list retaining its emoji/color.
+
+## Top-right Menu Redesign
+
+- [ ] `ViewMenu.tsx`: replace the narrow menu/accordion with a wide two-panel popover — 380px main panel (排序依据 row, 5-column theme grid, optional 列表颜色, custom-list actions) + 224px right-side sort flyout with option icons and the active check. The sort flyout opens on hover/focus (click also opens) and closes on leaving `.main-menu`.
+- [ ] Theme grid: add a dashed `+` upload tile (Tauri dialog + `attachmentAdd`) and a custom image tile with a hover/focus top-right delete (clears preset/image, keeps custom list emoji/color); pass the resolved `bgUrl` from `MainPane` for the image preview; show a small error when the image is >12MB or the upload fails.
+- [ ] Apply theme presets/colors through the store without closing the menu; `fixedIcon` targets drop the emoji; sort/rename/delete still close it.
+- [ ] Theme colors / list-color removal: delete `TaskList.color`, `setListColor`, the sidebar list tint, and the title color dot; rename the palette to `THEME_COLORS` (14 named `linear-gradient(135deg, …)` values, 7 mid + 7 light with `light: true`); add `ListTheme.color`; render it in `MainPane.mainStyle`; add `themeLight`/`.on-light` CSS so light gradients use dark title/subtitle/header actions/empty/suggestion/scrollbar; show the 14 gradient tiles in the ViewMenu grid between 无 and the presets; remove the 列表颜色 section and palette CSS.
+- [ ] Remove the `ThemePicker` modal: delete `ThemePicker.tsx`, `MainPane`'s `themeOpen`/`themeTarget`/`onTheme`, the ViewMenu's 更多主题… entry and `PaletteIcon`, the `THEME_EMOJIS` export, and the modal-only emoji/tile-name CSS. Keep a custom list's existing theme emoji display-only.
+- [ ] `icons.tsx`: add `CalendarPlusIcon` (已添加) and `GripVerticalIcon` (我的顺序) for the sort flyout.
+- [ ] `styles.css`: `.main-menu` flex anchor; `.main-menu-panel` 380px; `.sort-flyout` 224px; theme grid 5 columns / 46px tiles; menu palette swatches; active/checked states. Verify the panels open side-by-side under the More button and that theme clicks leave the menu open.
 
 ## Validation Commands
 

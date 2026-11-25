@@ -221,10 +221,10 @@ export function myDaySuggestions(db: DB): Task[] {
 export function headerInfo(
   db: DB,
   view: View,
-): { title: string; subtitle?: string; color?: string } {
+): { title: string; subtitle?: string } {
   if (view.type === "list") {
     const list = db.lists.find((l) => l.id === view.id && !l.deletedAt);
-    return { title: list?.name ?? "列表", color: list?.color };
+    return { title: list?.name ?? "列表" };
   }
   switch (view.id) {
     case "myday":

@@ -19,13 +19,6 @@ export const THEME_PRESETS: ThemePreset[] = [
   { id: "bloom", name: "花园" },
 ];
 
-export const THEME_EMOJIS = [
-  "📋", "📌", "⭐", "🔥", "💡", "✅", "🎯", "📚",
-  "💼", "🏠", "🛒", "✈️", "🏃", "🎵", "🎨", "🍀",
-  "❤️", "🌙", "☀️", "🐱", "🎮", "🧪", "💰", "🎁",
-  "🍎", "☕", "🌱", "🧘", "📝", "🚀", "🏆", "🧹",
-];
-
 export function presetUrl(id: string): string {
   return `/backgrounds/${id}.svg`;
 }

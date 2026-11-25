@@ -10,7 +10,7 @@ Frontend-only change. No Rust commands, no storage format changes beyond an opti
 - `src/components/Sidebar.tsx` — sidebar search, remove per-list menu, new-list trigger
 - `src/components/MainPane.tsx` — header actions, menu, inline rename, sort application
 - `src/components/ViewMenu.tsx` — new top-right menu component
-- `src/components/ThemePicker.tsx` — list color section
+- `src/components/ViewMenu.tsx` — inline theme grid/upload/gradient colors
 - `src/styles.css` — sidebar search, menu/rename styles, dead-rule cleanup
 - `tests/sort.test.ts` — new sort unit tests
 
@@ -79,7 +79,7 @@ export function smartTheme(db: DB, id: SmartViewId): ListTheme | undefined;
 - List themes stay on `list.theme`.
 - Smart-view themes live in `db.shared[smartThemeKey(id)]` (`mydayTheme` is kept for the existing My Day theme; others use `theme:<id>`).
 - `MainPane.themeTarget` is non-null for every view, so the menu always offers 主题.
-- `ThemePicker` applies list/custom image/emoji the same way; the 列表颜色 section remains list-only.
+- `ViewMenu` applies list/custom image/emoji the same way; gradients are background themes, not a separate list-color field.
 
 ## Data Flow
 
@@ -98,8 +98,8 @@ export function smartTheme(db: DB, id: SmartViewId): ListTheme | undefined;
 - Escape clears the query and blurs; an empty query shows all tasks in the view.
 - Remove the `+` from the "列表" section header (section becomes a plain label).
 - Add a "新建列表" action at the bottom of the sidebar (above 同步/设置). It sets the existing `adding` state; the inline name input stays at the end of the list section and scrolls into view when opened.
-- Delete `SortableListRow`'s `...` menu, menu state, `LIST_COLORS` palette, rename and delete handlers. Keep drag-and-drop and the emoji/color-dot icon.
-- `LIST_COLORS` import moves to `ThemePicker`.
+- Delete `SortableListRow`'s `...` menu, menu state, rename and delete handlers. Keep drag-and-drop and the emoji/list-glyph icon.
+- `THEME_COLORS` import moves to `ViewMenu` as the gradient background palette.
 
 ### MainPane header
 
@@ -111,16 +111,28 @@ export function smartTheme(db: DB, id: SmartViewId): ListTheme | undefined;
 
 ### ViewMenu (new component)
 
-Props: `view`, `list` (when list view), `sort`, callbacks `onSort`, `onRename`, `onTheme`, `onDelete`, `canDelete`, `onClose`.
+Props: `view`, `list` (when list view), `sort`, `canDelete`, `fixed`, callbacks `onSort`, `onRename`, `onTheme`, `onDelete`, `onClose`.
 
 ```
-List view:   重命名 / 主题 / 排序依据 ▸ / 删除列表
-Smart view:  主题 / 排序依据 ▸
+Wide popover, anchored at the More button:
+┌ main panel (380px) ─────────────┐  ┌ sort flyout (224px) ──────────┐
+│ ⇅ 排序依据                    › │  │ ☆ 重要                        │
+│ 主题                            │  │ 🗓 截止日期                    │
+│ [无] [14 colors] [8 presets]   │  │ 🗓+ 已添加                     │
+│ [custom image] [+]              │  │ ⇅ 字母顺序                    │
+│ ─────────────────────────────── │  │ ⠿ 我的顺序                 ✓  │
+│ 重命名 / 删除列表 (custom only)  │  └───────────────────────────────┘
+└─────────────────────────────────┘
 ```
 
-- "排序依据" expands inline (accordion) with the five options and a check on the active one.
-- Close on: outside `mousedown`, Escape, selecting a non-sort action, or selecting a sort option.
-- Reuse `.menu` styles; add `.menu-wrap` for positioning and `.menu button.active` for the checked sort.
+- Main panel: 排序依据 row with a chevron, then the 主题 section (5-column grid: 无 + 14 Microsoft-matched gradient colors + 8 presets + upload tile, 46px tiles). There is no separate 列表颜色 row.
+- Theme grid extras: a dashed `+` tile uploads a local image (Tauri `open` dialog → `api.attachmentAdd` → `applyTheme({ image })`); while uploading it shows a spinner. If `theme.image` exists, a custom tile renders before the `+` using the MainPane's resolved `bgUrl` (fallback `themeFallback(theme)`), marked active. On hover/focus the custom tile shows a top-right `.theme-tile-delete` (CloseIcon) that clears `preset`/`image` without touching the custom list's emoji or color. Preset/无 tiles never render the delete button.
+- The custom tile is wrapped in `.theme-tile-wrap` so the delete can be a sibling button (no nested buttons); both keep the 46px tile height and the delete is 18px in the top-right.
+- Sort flyout opens to the right, aligned to the top of the main panel, with the five `SORT_OPTIONS`, icons (star/calendar/calendar-plus/sort/grip), and a check at the right of the active option. Hovering or focusing the 排序依据 row opens it (click also opens); leaving the whole `.main-menu` closes it again.
+- Theme application calls the store directly (`setListTheme` / `setShared`) and keeps the menu open; `fixedIcon` targets drop the emoji. All theme editing is inline in this menu; there is no separate ThemePicker modal or 更多主题… entry.
+- List actions remain 重命名 / 删除列表 on custom lists; smart views and the fixed 任务 have no list actions. The MS-only print/email/pin items are not implemented.
+- Close on: outside `mousedown`, Escape, selecting a sort option, rename, delete, or the pointer leaving the menu. Theme tile/color/upload/delete interactions keep the popover open.
+- Reuse `.menu` for both panels; `.main-menu` is the flex anchor; `.main-menu-panel` is 380px, `.sort-flyout` 224px, both are static flex children of the anchor.
 
 ### Rename
 
@@ -130,17 +142,17 @@ Smart view:  主题 / 排序依据 ▸
 
 ### Theme
 
-- Menu "主题" opens the existing `ThemePicker` modal on every view.
-- `ThemePicker` accepts list targets and smart targets (`myday`, `important`, `planned`, `tasks`, `completed`); smart themes are stored through `setShared(smartThemeKey(id), …)`.
-- `ThemePicker` adds a "列表颜色" section for list targets only (10 `LIST_COLORS` swatches, active ring). Clicking calls `setListColor` immediately.
-- Section order for lists: 颜色 → 图标（emoji）→ 背景; smart views show 图标（emoji）→ 背景.
+- All theme editing is in the `ViewMenu` main panel: the 5-column grid (无 + 14 gradients + 8 presets + upload), the custom-image delete. The standalone `ThemePicker` modal and 更多主题… entry were removed.
+- Smart/default targets store their theme in `list.theme` / `db.shared` (`mydayTheme`, `theme:<smartId>`); the menu's `fixedIcon` drops `theme.emoji`, so their sun/star/calendar/infinity/check/house icons never change, while gradient/image/upload backgrounds still apply.
+- The former list-color palette is now the `THEME_COLORS` / `ListTheme.color` gradient background set: each entry is `{ name, value: "linear-gradient(135deg, …)", light? }`; the first 7 are mid tones (blue/purple/rose/red/green/teal/gray) with the white on-image title, the last 7 are light (light blue/lavender/pink/peach/mint/cyan/gray) with `light: true`. The tile and the page use the same gradient. `TaskList.color`, `setListColor`, the sidebar tint, and the title dot are removed. Custom lists show their existing theme emoji or the accent list glyph; an existing emoji stays display-only.
+- `MainPane` derives `themeLight` from the matched `THEME_COLORS` entry and adds `.on-light` to `.main`; CSS `.main.on-image.on-light` switches the title, subtitle, header actions, empty state, suggestion title, and scrollbar to dark text/controls. The 7 mid colors keep the white title treatment.
 
 ### Styles
 
 - `.sidebar-search`: margin around the existing `.search-box` look; white input on the gray sidebar.
 - `.main-menu` / `.menu-wrap`: relative anchor; menu right-aligned.
 - `.main-title input`: title-sized inline input.
-- Remove `.nav-more` rules if no longer referenced. Keep `.palette` (reused by ThemePicker).
+- Remove `.nav-more` rules if no longer referenced. Keep `.palette` (used by the ViewMenu theme section).
 
 ## List Groups
 
@@ -206,16 +218,17 @@ toggleGroupCollapsed: (id: string) => void;          // settings.collapsedGroups
 ```
 brand
 search
-smart views
-ungrouped lists        (if any)
+我的一天
+任务                   (fixed default list, house icon)
+重要 / 计划内 / 全部 / 已完成
+divider
+ungrouped custom lists (if any)
 group header 1         (chevron + name + hover menu, droppable)
   list rows
 group header 2
   list rows
 inline new-list input
 footer: [ + 新建列表 ][ □+ 创建新组 ]
-        [ 同步 ]
-        [ 设置 ]
 ```
 
 - New component `GroupRow.tsx`: chevron toggles collapse, name double-click enters rename, hover `MoreIcon` opens a small menu (重命名 / 删除组).
@@ -296,16 +309,18 @@ footer: [ + 新建列表 ][ □+ 创建新组 ]
 
 - `DEFAULT_LIST_ID = "list_default"`; `createDB` seeds a list named `任务` with that id.
 - `ensureDefaultList(db)` adds the list if missing and revives it if tombstoned; `normalizeDb` calls it on load/import.
-- Sidebar order: 我的一天 → 重要 / 计划内 / 全部 / 已完成 → fixed 任务 default list → divider → custom lists/groups. There are no text section headings (`智能列表`/`列表` were removed); the divider separates the fixed entries from custom lists. The default list is excluded from `listSections`/drag-and-drop.
+- Sidebar order: 我的一天 → fixed 任务 default list → 重要 / 计划内 / 全部 / 已完成 → divider → custom lists/groups. There are no text section headings (`智能列表`/`列表` were removed); the divider separates the fixed entries from custom lists. The default list is excluded from `listSections`/drag-and-drop. The first two rows form the basic section; the four smart rows the smart-list section; custom lists/groups the third.
+- The default 任务 row always renders `HomeIcon` (16px) in the sidebar and 24px in the content title, regardless of the stored theme emoji/color.
 - `SMART_VIEWS` becomes `["myday","important","planned","all","completed"]`; the old `tasks` view maps to the new `all` (label 全部).
 - `MainPane` QuickAdd target is `view.type === "list" ? view.id : DEFAULT_LIST_ID`.
 - `ViewMenu` receives `fixed` for the default list and hides rename/delete; the store refuses to delete `DEFAULT_LIST_ID`.
-- Custom lists (e.g. `AAA`) remain normal: creatable, renamable, groupable, deletable.
+- Custom lists (e.g. `AAA`) remain normal: creatable, renamable, groupable, deletable, and icon/color customizable.
 
 ## Smart List Icons
 
-- Icons are 16px with 1.5 stroke width (Fluent-like thin lines). My Day: `--accent` sun; 全部/已完成: `--smart-red` (`#C42B1C` light / `#FF6B5E` dark); 重要/计划内/任务: `--text-secondary`.
-- Active rows keep the per-icon color (the inset highlight and accent bar indicate selection); 已完成 uses Lucide `CircleCheck`.
+- Icons are 16px in the sidebar and 24px in the content title, with 1.5 stroke width (Fluent-like thin lines). My Day: `--accent` sun; 全部/已完成: `--smart-red` (`#C42B1C` light / `#FF6B5E` dark); 重要/计划内/任务: `--text-secondary`.
+- These system icons are fixed: the sidebar and title always use them; a theme emoji stored in a smart view/default-list theme is ignored in both places, and the ViewMenu theme grid has no emoji picker for those targets. Custom lists keep any existing theme emoji display-only (the emoji picker was removed with the theme modal).
+- Active rows keep the per-icon color (the inset highlight and accent bar indicate selection); 已完成 uses Lucide `CircleCheck`; the default 任务 uses the house in both places.
 
 ## Group Rows
 
@@ -320,9 +335,9 @@ footer: [ + 新建列表 ][ □+ 创建新组 ]
 
 - `.main-header` padding `40px 32px 6px 44px` (same 40px top with `.main.on-image`); `.main-title` is 32px/40px, weight 600, letter-spacing -0.3px.
 - The title starts with `.header-title-icon`: a 32×40px inline-flex slot + 8px gap. The icon starts at 44px and the title text at 84px from the content pane's left edge; Microsoft measures ≈45px and ≈85px.
-- Icon precedence: `theme.emoji` → list color dot → list-lines glyph (list views); smart views use their sidebar icon (My Day sun, 重要 star, 计划内 calendar, 全部 infinity, 已完成 circled check). The standard icons use `currentColor`, so they turn white with the title on theme backgrounds.
+- Icon precedence: smart views always use their fixed sidebar icon (My Day sun, 重要 star, 计划内 calendar, 全部 infinity, 已完成 circled check); the default 任务 always uses the house; custom lists use `theme.emoji` → list-lines glyph. The system icons use `currentColor`, so they turn white with the title on theme backgrounds.
 - `.main-title .header-emoji` is 28px inside the slot; no extra margin. The slot stays rendered for every view, keeping the title x-position stable.
-- `.task-scroll` padding `10px 56px 60px 64px`; `.quick-add` margin `0 56px 16px 64px`. Task cards therefore start 20px right of the title text (64 vs 84), matching the reference.
+- `.task-scroll` padding `10px 56px 8px 64px`; `.quick-add` margin `16px 66px 16px 64px`. Task cards therefore start 20px right of the title text (64 vs 84), matching the reference.
 - The count subtitle (`N 项任务` / `N 项已完成`) is removed for non-MyDay views; only My Day renders `.main-subtitle` with its date. `MainPane` composes `subtitle` as `""` otherwise and conditionally renders it.
 - The Microsoft 计划内 task-group headers (先前 / 今天 / 稍后) are explicitly out of scope for this title pass.
 
@@ -340,11 +355,27 @@ footer: [ + 新建列表 ][ □+ 创建新组 ]
 - Dark tokens: `#2b2b2b` / `#3b3a39` / `#333333` / `#26364f` / `0 1px 2px rgba(0,0,0,0.4)`.
 - `.main.on-image` keeps only the page background, white header/title/actions, empty-state, suggestion, quick-add, and welcome treatments. It has no `.task-row`, `.task-title`, `.task-meta`, `.checkbox`, `.row-star`, `.drag-handle`, or `.task-scroll` overrides. A themed and a plain view therefore have identical task surfaces; the theme changes the backdrop, not the task cards.
 
+## Task-list Overflow
+
+- `.task-scroll` reserves a stable scrollbar gutter and renders a thin, always-visible scrollbar: `scrollbar-gutter: stable`, `scrollbar-width: thin`, `scrollbar-color: var(--scrollbar-thumb) transparent`, plus `::-webkit-scrollbar` / `-thumb` rules (6px thumb inside a 10–12px gutter, transparent track).
+- Scrollbar tokens: light `#c8c6c4` / `#a8a6a4`; dark `#5c5a58` / `#777573`; on a theme background use `rgba(255,255,255,0.55)` / `0.75`.
+- Bottom inset: `.task-scroll` padding-bottom is 8px (inside the scroll). The `.quick-add` has a 16px top margin outside the scroll, so a 16px page-background gap exists between the scroll viewport and the add bar at every scroll position — the previous 20px scroll-content padding was invisible until the end and let the last visible row press against the bar. At the end of the scroll the last task sits ~24px above the add bar.
+- The `.quick-add` keeps the 64px left inset and uses `margin-right: 66px` (56px content padding + the 10px reserved scrollbar gutter), aligning its right edge with the task cards so the bottom row does not look narrower than the add bar.
+- The add bar remains a flex footer, not an overlay: the list scrolls in its own viewport above the bar; the visible scrollbar communicates that a clipped row continues below the fold.
+
+## QuickAdd States
+
+- `QuickAdd.tsx` gains an `editing` state; the input is no longer always rendered.
+- Normal: `.quick-add` contains a `.quick-add-trigger` button (plus + `.quick-add-label`), no input/hint. Label uses `var(--text)`, plus `var(--text-secondary)`. The bar keeps `var(--bg-sidebar)` (on image: `rgba(255,255,255,0.85)` + 10px blur). `.quick-add:hover:not(.editing)` uses `--quick-add-hover`: `#e8eceb` light / `#333333` dark; on image `#e8eceb`.
+- Editing: `.quick-add.editing` uses the task-card surface (`--task-card-bg`, 1px `--task-card-border`, 4px radius, `--task-card-shadow`, `padding: 10px 8px`). It renders an empty `.checkbox.add-task-checkbox` (pointer-events none), the focused input (placeholder `添加任务`), and the `Enter 添加` hint. The old `.quick-add:focus-within` blue inset is removed; the card border supplies the focus affordance.
+- Image-theme editing overrides reset the translucent bar and dark input colors (`background: var(--task-card-bg)`, no backdrop-filter, input/hint use `--text`/`--text-tertiary`).
+- Interactions: trigger click / global quick-add nonce → `editing = true`, focus (and select on the shortcut); Enter calls the existing `addTask` and keeps editing; Escape clears and exits; blur with an empty value exits; blur with text keeps the draft in the editing card.
+
 ## Trade-offs
 
 - Inline accordion for sorting instead of a flyout submenu: fewer positioning bugs, slightly taller menu. Acceptable for five options.
 - Sort stored in local settings instead of a new synced entity: sort is a per-device presentation choice; avoids merge complexity.
-- List color stays a separate `TaskList.color` field (not merged into `theme`): keeps the change frontend-only and avoids touching merge semantics; the UI still presents color inside the theme dialog.
+- The separate list color was removed rather than kept as a second color system: the former palette now serves as theme backgrounds, so a list has one visual color (its background), matching Microsoft To Do. Custom list identity is the existing emoji or the accent list glyph.
 - Removing the sidebar per-list menu reduces duplicated actions but makes the top-right menu the only list-management entry; the menu is present on every list view, so discoverability is preserved.
 - Groups keep creation order in this iteration; drag-reordering groups would require a second nested sortable layer and is deferred.
 - Collapse state lives in local settings (`settings.collapsedGroups`), not synced, because it is a per-device view preference.
@@ -363,5 +394,5 @@ footer: [ + 新建列表 ][ □+ 创建新组 ]
 3. Each sort option reorders correctly; choice persists after switching views and restarting the app.
 4. Drag works only under 我的顺序; it is disabled for other sorts and during search.
 5. Rename commits/cancels correctly; delete switches lists; last list cannot be deleted.
-6. Theme is reachable on every view and persists per view; list color only appears for lists; sidebar icon updates.
+6. Theme is reachable on every view and persists per view; gradients and images are both backgrounds; there is no separate list color.
 7. My Day suggestions still open/close.

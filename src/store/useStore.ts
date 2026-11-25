@@ -62,7 +62,6 @@ export interface StoreState {
 
   addList: (name: string, groupId?: string) => string | null;
   renameList: (id: string, name: string) => void;
-  setListColor: (id: string, color: string) => void;
   setListTheme: (id: string, theme: ListTheme | undefined) => void;
   setShared: (key: string, value: unknown) => void;
   deleteList: (id: string) => void;
@@ -298,15 +297,6 @@ export const useStore = create<StoreState>((set, get) => {
         ...db,
         lists: db.lists.map((l) =>
           l.id === id ? { ...l, name: trimmed, ...touch(db.deviceId) } : l,
-        ),
-      }));
-    },
-
-    setListColor: (id, color) => {
-      commit((db) => ({
-        ...db,
-        lists: db.lists.map((l) =>
-          l.id === id ? { ...l, color, ...touch(db.deviceId) } : l,
         ),
       }));
     },

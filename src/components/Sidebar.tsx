@@ -375,6 +375,21 @@ export function Sidebar() {
           <span className="nav-label">我的一天</span>
         </div>
 
+        <div
+          className={`nav-item ${
+            view.type === "list" && view.id === DEFAULT_LIST_ID ? "active" : ""
+          }`}
+          onClick={() => setView({ type: "list", id: DEFAULT_LIST_ID })}
+        >
+          <span className="nav-icon">
+            <HomeIcon size={16} strokeWidth={1.5} />
+          </span>
+          <span className="nav-label">{defaultList?.name ?? "任务"}</span>
+          {(perList[DEFAULT_LIST_ID] ?? 0) > 0 ? (
+            <span className="nav-count">{perList[DEFAULT_LIST_ID]}</span>
+          ) : null}
+        </div>
+
         {SMART_ITEMS.map(({ id, label, Icon, color }) => {
           const active = view.type === "smart" && view.id === id;
           const count = counts[id];
@@ -392,25 +407,6 @@ export function Sidebar() {
             </div>
           );
         })}
-
-        <div
-          className={`nav-item ${
-            view.type === "list" && view.id === DEFAULT_LIST_ID ? "active" : ""
-          }`}
-          onClick={() => setView({ type: "list", id: DEFAULT_LIST_ID })}
-        >
-          <span className="nav-icon">
-            {defaultList?.theme?.emoji ? (
-              <span className="nav-emoji">{defaultList.theme.emoji}</span>
-            ) : (
-              <HomeIcon size={16} strokeWidth={1.5} />
-            )}
-          </span>
-          <span className="nav-label">{defaultList?.name ?? "任务"}</span>
-          {(perList[DEFAULT_LIST_ID] ?? 0) > 0 ? (
-            <span className="nav-count">{perList[DEFAULT_LIST_ID]}</span>
-          ) : null}
-        </div>
 
         <div className="sidebar-divider" />
 
@@ -575,7 +571,7 @@ function SortableListRow({
         ) : (
           <span
             className="nav-list-glyph"
-            style={{ color: list.color ?? "var(--accent)" }}
+            style={{ color: "var(--accent)" }}
           >
             <ListLinesIcon size={16} strokeWidth={1.5} />
           </span>

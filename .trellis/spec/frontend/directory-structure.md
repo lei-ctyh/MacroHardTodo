@@ -15,13 +15,12 @@ MacroHardTodo/
 │   ├── components/           UI components (PascalCase .tsx)
 │   │   ├── Sidebar.tsx
 │   │   ├── MainPane.tsx      header, task list, bottom QuickAdd, theme background
-│   │   ├── ViewMenu.tsx      top-right overflow menu (rename/theme/sort/delete)
+│   │   ├── ViewMenu.tsx      top-right menu (sort flyout, theme grid/upload, list colors, actions)
 │   │   ├── GroupRow.tsx      sidebar group header (collapse, inline rename, hover menu, droppable)
 │   │   ├── TaskRow.tsx
 │   │   ├── TaskDetail.tsx    right-side detail panel
 │   │   ├── QuickAdd.tsx      fixed bottom add bar
 │   │   ├── SuggestionPanel.tsx
-│   │   ├── ThemePicker.tsx
 │   │   ├── SettingsDialog.tsx / SyncDialog.tsx / MigrationWizard.tsx
 │   │   ├── Modal.tsx         shared dialog shell
 │   │   └── icons.tsx         central lucide re-exports (never import lucide elsewhere)
@@ -75,4 +74,4 @@ MacroHardTodo/
 
 - Feature slice: `SuggestionPanel.tsx` (UI) + `myDaySuggestionGroups` in `views.ts` (logic) + `setMyDay` in `useStore` (mutation).
 - Sync slice: `src-tauri/src/sync.rs` (transport) + `src/lib/syncClient.ts` (merge/upload) + `tests/merge.test.ts` (unit).
-- Theme slice: `ThemePicker.tsx` (UI, every view) + `themes.ts` (presets/resolution, `smartTheme`/`smartThemeKey`) + `TaskList.theme` / `DB.shared["mydayTheme"]` / `DB.shared["theme:<smartId>"]` (data).
+- Theme slice: `ViewMenu.tsx` (inline theme grid/upload/list colors, every view) + `themes.ts` (presets/resolution, `smartTheme`/`smartThemeKey`) + `TaskList.theme` / `DB.shared["mydayTheme"]` / `DB.shared["theme:<smartId>"]` (data).
