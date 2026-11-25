@@ -316,6 +316,16 @@ footer: [ + 新建列表 ][ □+ 创建新组 ]
 - Empty expanded groups render `.group-empty` at the list level (padding-left 38px, gap 17px, 2×20px line near the list icon + text between the list icon and name, `拖到此处来添加列表`).
 - Group lists use `.group-lists .nav-item` padding-left 32px and gap 26px, so the icon sits 20px right of the group icon and the name 36px right of the group name; the active accent bar is at `left: 29px` (3px left of the list icon).
 
+## Content Header Metrics (Microsoft-matched)
+
+- `.main-header` padding `40px 32px 6px 44px` (same 40px top with `.main.on-image`); `.main-title` is 32px/40px, weight 600, letter-spacing -0.3px.
+- The title starts with `.header-title-icon`: a 32×40px inline-flex slot + 8px gap. The icon starts at 44px and the title text at 84px from the content pane's left edge; Microsoft measures ≈45px and ≈85px.
+- Icon precedence: `theme.emoji` → list color dot → list-lines glyph (list views); smart views use their sidebar icon (My Day sun, 重要 star, 计划内 calendar, 全部 infinity, 已完成 circled check). The standard icons use `currentColor`, so they turn white with the title on theme backgrounds.
+- `.main-title .header-emoji` is 28px inside the slot; no extra margin. The slot stays rendered for every view, keeping the title x-position stable.
+- `.task-scroll` padding `10px 56px 60px 64px`; `.quick-add` margin `0 56px 16px 64px`. Task cards therefore start 20px right of the title text (64 vs 84), matching the reference.
+- The count subtitle (`N 项任务` / `N 项已完成`) is removed for non-MyDay views; only My Day renders `.main-subtitle` with its date. `MainPane` composes `subtitle` as `""` otherwise and conditionally renders it.
+- The Microsoft 计划内 task-group headers (先前 / 今天 / 稍后) are explicitly out of scope for this title pass.
+
 ## Trade-offs
 
 - Inline accordion for sorting instead of a flyout submenu: fewer positioning bugs, slightly taller menu. Acceptable for five options.

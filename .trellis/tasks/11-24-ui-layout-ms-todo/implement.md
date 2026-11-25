@@ -116,6 +116,13 @@
 - [ ] README/spec updates; add `tests/default-list.test.ts`.
 - [ ] Run `npm test`, `npx tsc --noEmit`, `npm run build`; reload the app and verify the default list appears and QuickAdd targets it.
 
+## Content Header Title Metrics
+
+- [ ] `styles.css`: `.main-header` padding `40px 32px 6px 44px`; `.main-title` 32px/40px/600; `.header-title-icon` 32×40 + 8px gap; `.header-emoji` 28px; `.task-scroll` padding `10px 56px 60px 64px`; `.quick-add` margin `0 56px 16px 64px`.
+- [ ] `MainPane.tsx`: render the fixed icon slot (theme emoji → list color dot/list glyph → smart-view icon via `SMART_TITLE_ICONS`); make `subtitle` My Day-only and render it conditionally.
+- [ ] Verify with CDP: icon x=44, title text x=84, task card x=64 on 计划内 / 任务 / AAA; My Day still shows the date; other views show no count subtitle.
+- [ ] Task-group headers (先前 / 今天 / 稍后) remain out of scope for this pass.
+
 ## Validation Commands
 
 ```bash

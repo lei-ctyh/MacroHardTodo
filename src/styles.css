@@ -607,7 +607,7 @@ select {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 22px 32px 6px;
+  padding: 40px 32px 6px 44px;
 }
 
 .header-text {
@@ -616,9 +616,9 @@ select {
 }
 
 .main-title {
-  font-size: 28px;
-  line-height: 36px;
-  font-weight: 650;
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 600;
   letter-spacing: -0.3px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -660,8 +660,19 @@ select {
   margin-top: 2px;
 }
 
-.header-emoji {
+.header-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 40px;
   margin-right: 8px;
+  vertical-align: top;
+}
+
+.header-emoji {
+  font-size: 28px;
+  line-height: 1;
 }
 
 /* ---------------- 主题背景横幅 ---------------- */
@@ -777,7 +788,7 @@ select {
 }
 
 .main.on-image .main-header {
-  padding-top: 24px;
+  padding-top: 40px;
 }
 
 .main.on-image .main-title {
@@ -1244,7 +1255,7 @@ select {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 24px 16px;
+  margin: 0 56px 16px 64px;
   padding: 10px 14px;
   border: none;
   border-radius: 6px;
@@ -1291,7 +1302,7 @@ select {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 10px 32px 60px;
+  padding: 10px 56px 60px 64px;
 }
 
 .task-group-title {

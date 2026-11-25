@@ -33,11 +33,25 @@ import { ThemePicker, type ThemeTarget } from "./ThemePicker";
 import { SuggestionPanel } from "./SuggestionPanel";
 import { ViewMenu } from "./ViewMenu";
 import {
+  AllIcon,
+  CalendarIcon,
   ChevronDownIcon,
   ChevronRightIcon,
+  CompletedIcon,
   LightbulbIcon,
+  ListLinesIcon,
   MoreIcon,
+  StarOutlineIcon,
+  SunIcon,
 } from "./icons";
+
+const SMART_TITLE_ICONS = {
+  myday: SunIcon,
+  important: StarOutlineIcon,
+  planned: CalendarIcon,
+  all: AllIcon,
+  completed: CompletedIcon,
+} as const;
 
 export function MainPane() {
   const db = useStore((s) => s.db);
@@ -78,6 +92,8 @@ export function MainPane() {
   );
   const info = headerInfo(db, view);
   const isMyDay = view.type === "smart" && view.id === "myday";
+  const SmartTitleIcon =
+    view.type === "smart" ? SMART_TITLE_ICONS[view.id] : null;
 
   const completedInList = useMemo(
     () =>
@@ -118,10 +134,7 @@ export function MainPane() {
         "日一二三四五六"[d.getDay()]
       }`;
     }
-    if (view.type === "smart" && view.id === "completed") {
-      return `${visible.length} 项已完成`;
-    }
-    return `${visible.length} 项任务`;
+    return "";
   })();
 
   const rowProps = (task: Task) => ({
@@ -278,20 +291,22 @@ export function MainPane() {
               renaming && view.type === "list" ? "renaming" : ""
             }`}
           >
-            {theme?.emoji ? (
-              <span className="header-emoji">{theme.emoji}</span>
-            ) : null}
-            {info.color ? (
-              <span
-                className="nav-list-dot"
-                style={{
-                  display: "inline-block",
-                  background: info.color,
-                  marginRight: 10,
-                  verticalAlign: "middle",
-                }}
-              />
-            ) : null}
+            <span className="header-title-icon">
+              {theme?.emoji ? (
+                <span className="header-emoji">{theme.emoji}</span>
+              ) : view.type === "list" ? (
+                info.color ? (
+                  <span
+                    className="nav-list-dot"
+                    style={{ background: info.color }}
+                  />
+                ) : (
+                  <ListLinesIcon size={24} strokeWidth={1.5} />
+                )
+              ) : SmartTitleIcon ? (
+                <SmartTitleIcon size={24} strokeWidth={1.5} />
+              ) : null}
+            </span>
             {renaming && view.type === "list" ? (
               <input
                 className="title-input"
@@ -314,7 +329,7 @@ export function MainPane() {
               info.title
             )}
           </div>
-          <div className="main-subtitle">{subtitle}</div>
+          {subtitle ? <div className="main-subtitle">{subtitle}</div> : null}
         </div>
         <div className="header-actions">{actions}</div>
       </div>

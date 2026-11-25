@@ -65,6 +65,7 @@ Make navigation, search, and top-right actions mirror Microsoft To Do so the app
 - [ ] On Windows 11 the native title bar background matches the sidebar in light and dark themes, and keeps native minimize/maximize/close behavior.
 - [ ] Clicking the brand/account area opens a dropdown with 同步 (showing status) and 设置; the footer contains only the new-list/new-group row.
 - [ ] Existing list actions (rename/theme/delete) and sorting continue to work for grouped lists.
+- [ ] The content header title matches the Microsoft To Do metrics: 32px/40px, icon starts at 44px, title text at 84px, task cards and QuickAdd at 64px; the 计划内 page has no count subtitle, while My Day keeps its date.
 - [ ] `npm test` and `npx tsc --noEmit` pass.
 
 ## List Groups (added 2026-11-24)
@@ -86,10 +87,17 @@ Make navigation, search, and top-right actions mirror Microsoft To Do so the app
 - R25: Reorganize the sidebar without text section headings: 我的一天, then 重要 / 计划内 / 全部 / 已完成, then the fixed 任务 default list, a divider, then custom lists/groups. The former all-tasks smart view is renamed 全部; `AAA` and other user-created lists are custom.
 - R26: Group headers have no `...` button. Right-clicking a group opens a context menu with 重命名组 / 新建列表, plus 删除组 for empty groups or 取消分组列表 for non-empty groups; 新建列表 creates a list inside that group and selects it. Lists without an emoji use a blue list-lines icon. Expanded groups show an up chevron and empty groups show the indented drag hint.
 
+## Content Header Title (added 2026-11-24)
+
+- R27: The list/smart-view title is 32px with a 40px line box and 600 weight; the header uses `40px 32px 6px 44px` padding. The title starts with a fixed 32px icon slot + 8px gap, so icon x=44px and text x=84px relative to the content pane.
+- R28: The title icon is the theme emoji when set; otherwise a list shows its color dot, or a list-lines glyph, and a smart view shows its own icon (My Day sun, 重要 star, 计划内 calendar, 全部 infinity, 已完成 circled check). On a theme background the icon inherits the white title color.
+- R29: Task rows and QuickAdd use a 64px left inset (56px right), placing the task cards 20px right of the title text like Microsoft To Do. Non-MyDay views no longer show the `N 项任务` / `N 项已完成` subtitle; My Day keeps its date subtitle.
+
 ## Out of Scope
 
 - Global cross-list search.
 - Microsoft To Do actions not present in this app (print, email list, pin to Start, share).
+- Task date grouping headers (先前 / 今天 / 稍后) and their collapse behavior; the title sync does not add them.
 - Syncing sort preferences across devices.
 - Group drag-reordering, nested groups, and group-level themes/colors.
 - Data migration or compatibility before the first tagged release.
