@@ -28,6 +28,11 @@
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.14);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
   --radius: 6px;
+  --task-card-bg: #ffffff;
+  --task-card-border: #ececec;
+  --task-card-hover: #f7f7f7;
+  --task-card-selected: #eaf2ff;
+  --task-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   --sidebar-w: 240px;
   --detail-w: 400px;
   color-scheme: light;
@@ -60,6 +65,11 @@
   --checkbox-border: #8a8886;
   --shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --task-card-bg: #2b2b2b;
+  --task-card-border: #3b3a39;
+  --task-card-hover: #333333;
+  --task-card-selected: #26364f;
+  --task-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   color-scheme: dark;
 }
 
@@ -811,67 +821,6 @@ select {
   color: #fff;
 }
 
-.main.on-image .task-row {
-  background: rgba(255, 255, 255, 0.95);
-  color: #202020;
-  border-radius: 4px;
-  margin-bottom: 2px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-}
-
-.main.on-image .task-row:hover {
-  background: #fff;
-}
-
-.main.on-image .task-row.selected {
-  background: #eaf2ff;
-}
-
-.main.on-image .task-title {
-  color: #202020;
-}
-
-.main.on-image .task-title.completed {
-  color: #8a8886;
-}
-
-.main.on-image .task-meta {
-  color: #605e5c;
-}
-
-.main.on-image .task-meta .overdue {
-  color: #c42b1c;
-}
-
-.main.on-image .task-notes-preview {
-  color: #8a8886;
-}
-
-.main.on-image .drag-handle {
-  color: #8a8886;
-}
-
-.main.on-image .checkbox {
-  border-color: #8a8886;
-}
-
-.main.on-image .checkbox.checked {
-  background: #2564cf;
-  border-color: #2564cf;
-}
-
-.main.on-image .checkbox.partial {
-  border-color: #2564cf;
-}
-
-.main.on-image .row-star {
-  color: #8a8886;
-}
-
-.main.on-image .row-star.on {
-  color: #eaa300;
-}
-
 .main.on-image .empty-state {
   color: rgba(255, 255, 255, 0.9);
 }
@@ -1106,10 +1055,6 @@ select {
   opacity: 1;
 }
 
-.main.on-image .task-scroll {
-  padding-top: 8px;
-}
-
 /* ---------------- 主题选择器 ---------------- */
 
 .theme-grid {
@@ -1318,16 +1263,20 @@ select {
   align-items: flex-start;
   gap: 12px;
   padding: 10px 8px;
-  border-radius: var(--radius);
+  background: var(--task-card-bg);
+  border: 1px solid var(--task-card-border);
+  border-radius: 4px;
+  margin-bottom: 2px;
+  box-shadow: var(--task-card-shadow);
   cursor: pointer;
   animation: fadeIn 0.12s ease;
-  transition: background 0.1s ease;
+  transition: background 0.1s ease, border-color 0.1s ease;
 }
 .task-row:hover {
-  background: var(--hover);
+  background: var(--task-card-hover);
 }
 .task-row.selected {
-  background: var(--selected);
+  background: var(--task-card-selected);
 }
 .task-row.dragging {
   opacity: 0.4;

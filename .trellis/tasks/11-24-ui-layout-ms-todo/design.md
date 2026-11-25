@@ -326,6 +326,20 @@ footer: [ + 新建列表 ][ □+ 创建新组 ]
 - The count subtitle (`N 项任务` / `N 项已完成`) is removed for non-MyDay views; only My Day renders `.main-subtitle` with its date. `MainPane` composes `subtitle` as `""` otherwise and conditionally renders it.
 - The Microsoft 计划内 task-group headers (先前 / 今天 / 稍后) are explicitly out of scope for this title pass.
 
+## Smart-view Task Metadata
+
+- `MainPane.rowProps` passes `listName` for every smart view (`view.type === "smart"`), including 已完成; list views leave it undefined because the list itself is already the context.
+- A completed task therefore renders the same metadata line as 计划内 / 全部: its steps or due date followed by the source list name (for example `0/1 AAA` or `11月23日 周一 AAA`), instead of hiding the list name only on the completed page.
+
+## Task Card Surface
+
+- Every `.task-row` is a card, independent of the view theme:
+  - `background: var(--task-card-bg)`, `border: 1px solid var(--task-card-border)`, `border-radius: 4px`, `margin-bottom: 2px`, `box-shadow: var(--task-card-shadow)`, `padding: 10px 8px`.
+  - `:hover` uses `--task-card-hover`; `.selected` uses `--task-card-selected`.
+- Light tokens: `#ffffff` / `#ececec` / `#f7f7f7` / `#eaf2ff` / `0 1px 2px rgba(0,0,0,0.1)`.
+- Dark tokens: `#2b2b2b` / `#3b3a39` / `#333333` / `#26364f` / `0 1px 2px rgba(0,0,0,0.4)`.
+- `.main.on-image` keeps only the page background, white header/title/actions, empty-state, suggestion, quick-add, and welcome treatments. It has no `.task-row`, `.task-title`, `.task-meta`, `.checkbox`, `.row-star`, `.drag-handle`, or `.task-scroll` overrides. A themed and a plain view therefore have identical task surfaces; the theme changes the backdrop, not the task cards.
+
 ## Trade-offs
 
 - Inline accordion for sorting instead of a flyout submenu: fewer positioning bugs, slightly taller menu. Acceptable for five options.

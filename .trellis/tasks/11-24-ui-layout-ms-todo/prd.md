@@ -66,6 +66,8 @@ Make navigation, search, and top-right actions mirror Microsoft To Do so the app
 - [ ] Clicking the brand/account area opens a dropdown with 同步 (showing status) and 设置; the footer contains only the new-list/new-group row.
 - [ ] Existing list actions (rename/theme/delete) and sorting continue to work for grouped lists.
 - [ ] The content header title matches the Microsoft To Do metrics: 32px/40px, icon starts at 44px, title text at 84px, task cards and QuickAdd at 64px; the 计划内 page has no count subtitle, while My Day keeps its date.
+- [ ] Tasks in every smart view, including 已完成, show the source list name in the task meta; list views omit it because the list is already the context.
+- [ ] The 重要 page (with a background theme) and the 计划内 / 已完成 pages (without one) render task rows with identical background, 1px border, 4px radius, 2px gap, shadow, padding, hover, and selected styles.
 - [ ] `npm test` and `npx tsc --noEmit` pass.
 
 ## List Groups (added 2026-11-24)
@@ -92,6 +94,11 @@ Make navigation, search, and top-right actions mirror Microsoft To Do so the app
 - R27: The list/smart-view title is 32px with a 40px line box and 600 weight; the header uses `40px 32px 6px 44px` padding. The title starts with a fixed 32px icon slot + 8px gap, so icon x=44px and text x=84px relative to the content pane.
 - R28: The title icon is the theme emoji when set; otherwise a list shows its color dot, or a list-lines glyph, and a smart view shows its own icon (My Day sun, 重要 star, 计划内 calendar, 全部 infinity, 已完成 circled check). On a theme background the icon inherits the white title color.
 - R29: Task rows and QuickAdd use a 64px left inset (56px right), placing the task cards 20px right of the title text like Microsoft To Do. Non-MyDay views no longer show the `N 项任务` / `N 项已完成` subtitle; My Day keeps its date subtitle.
+
+## Task Card Surface (added 2026-11-25)
+
+- R30: `.task-row` is a card globally (`background: var(--task-card-bg)`, 1px border, 4px radius, 2px gap, `--task-card-shadow`); `.task-row:hover` and `.selected` use `--task-card-hover` / `--task-card-selected`.
+- R31: `.main.on-image` no longer overrides task-row background, text, checkbox, star, or drag-handle styles, and no longer changes the task-scroll padding; the 重要 page (with a background) and the 计划内 page (without one) render the same task cards.
 
 ## Out of Scope
 

@@ -141,9 +141,7 @@ export function MainPane() {
     task,
     selected: task.id === selectedTaskId,
     listName:
-      view.type === "smart" && view.id !== "completed"
-        ? listNames.get(task.listId)
-        : undefined,
+      view.type === "smart" ? listNames.get(task.listId) : undefined,
     onSelect: () => selectTask(task.id === selectedTaskId ? null : task.id),
     onToggle: () => toggleComplete(task.id),
     onToggleStar: () => toggleImportance(task.id),

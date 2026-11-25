@@ -122,6 +122,8 @@
 - [ ] `MainPane.tsx`: render the fixed icon slot (theme emoji → list color dot/list glyph → smart-view icon via `SMART_TITLE_ICONS`); make `subtitle` My Day-only and render it conditionally.
 - [ ] Verify with CDP: icon x=44, title text x=84, task card x=64 on 计划内 / 任务 / AAA; My Day still shows the date; other views show no count subtitle.
 - [ ] Task-group headers (先前 / 今天 / 稍后) remain out of scope for this pass.
+- [ ] `MainPane.rowProps`: pass the source list name for all smart views, including 已完成, so completed rows show the same meta (`0/1 AAA`, `date AAA`) as the other smart views; list views still omit it.
+- [ ] `styles.css`: move the card surface to `.task-row` globally using `--task-card-bg/border/hover/selected/shadow`; remove all `.main.on-image .task-row`, task text, checkbox, star, drag-handle, and task-scroll overrides. Verify 重要 and 计划内 task rows compute the same card styles.
 
 ## Validation Commands
 

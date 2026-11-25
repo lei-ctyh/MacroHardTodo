@@ -30,6 +30,7 @@ const setMyDay = useStore((s) => s.setMyDay);
 - Section building and drag resolution are pure helpers (`listSections`, `moveList` in `views.ts`); keep components free of that logic.
 - The content header follows the Microsoft To Do metric grid: `.main-header` padding `40px 32px 6px 44px`; `.main-title` 32px/40px at weight 600; a 32×40px `.header-title-icon` slot + 8px gap (icon x=44px, title text x=84px); `.task-scroll` left 64px / right 56px; `.quick-add` margins `0 56px 16px 64px`. Keep the title icon slot rendered on every view: theme emoji first, then list color dot/list glyph, or the smart-view icon (`SMART_TITLE_ICONS` in `MainPane.tsx`), using `currentColor` so it turns white on theme backgrounds.
 - The content subtitle is My Day-only (its date). Other views deliberately have no `N 项任务` / `N 项已完成` line; counts live in the sidebar badges. Do not reintroduce the count subtitle when adding header actions.
+- Smart-view task rows include the source list name in their meta, including the 已完成 view; list views omit it because the current list is already the context. Keep `MainPane.rowProps.listName` keyed on `view.type === "smart"`, not on individual smart ids.
 - The content header has exactly one `ViewMenu` (`MoreIcon`) per view. My Day additionally keeps the suggestion (lightbulb) button; do not re-add header search or palette icons.
 - Every view has a theme (emoji/background; lists also have a color): lists store `list.theme`, smart views store theirs in `db.shared` (`mydayTheme` for My Day, `theme:<smartId>` for the rest); all of it is edited in `ThemePicker`, opened from `ViewMenu`. List identity is edited there too; list management lives in `ViewMenu`, not in sidebar rows.
 
@@ -58,7 +59,8 @@ export interface TaskRowProps {
 - All styling lives in `src/styles.css` with CSS variables (`--accent`, `--bg-main`, `--text-secondary`, …). Dark mode is `:root[data-theme="dark"]`.
 - Use inline styles only for dynamic data: list colors, computed widths, `backgroundImage` from a theme.
 - Reuse existing classes (`.nav-item`, `.task-row`, `.detail-row`, `.quick-add`, `.suggest-row`, `.welcome-card`). Add a new class rather than one-off Tailwind strings.
-- Image/theme surfaces use `.main.on-image` modifiers for white cards and white header text.
+- `.task-row` is a card in every view, independent of whether the view has a background theme: use the `--task-card-bg`, `--task-card-border`, `--task-card-hover`, `--task-card-selected`, and `--task-card-shadow` tokens (1px border, 4px radius, 2px gap). Do not add `.main.on-image .task-row` or task-text/checkbox/star overrides; `.main.on-image` is for the page backdrop, white header, empty-state, suggestion, quick-add, and welcome surfaces only.
+- Other image/theme surfaces use `.main.on-image` modifiers for white header text and contrast-aware overlays.
 - Transitions are 120–200 ms ease; respect `prefers-reduced-motion` (already handled globally).
 
 ---
