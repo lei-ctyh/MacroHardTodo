@@ -25,7 +25,7 @@ import {
 import { buildNextTask, nextDateForTask } from "../lib/recurrence";
 import { mergeDB } from "../lib/merge";
 import { doSync, resolveDataUrl, type SyncConfig } from "../lib/syncClient";
-import type { View } from "../lib/views";
+import { defaultCollapsedSections, type View } from "../lib/views";
 import { todayISO } from "../lib/dates";
 
 const LS_KEY = "macrohard-todo-db";
@@ -71,6 +71,7 @@ export interface StoreState {
   renameGroup: (id: string, name: string) => void;
   deleteGroup: (id: string) => void;
   toggleGroupCollapsed: (id: string) => void;
+  toggleSection: (viewKey: string, sectionKey: string) => void;
 
   addTask: (input: {
     listId: string;
@@ -322,19 +323,39 @@ export const useStore = create<StoreState>((set, get) => {
 
     deleteList: (id) => {
       if (id === DEFAULT_LIST_ID) return;
-      const db = get().db;
       const now = nowMs();
-      commit((d) => ({
-        ...d,
-        lists: d.lists.map((l) =>
-          l.id === id ? { ...l, deletedAt: now, ...touch(d.deviceId) } : l,
-        ),
-        tasks: d.tasks.map((t) =>
-          t.listId === id && !t.deletedAt
-            ? { ...t, deletedAt: now, ...touch(d.deviceId) }
-            : t,
-        ),
-      }));
+      commit((d) => {
+        // 删除列表但不丢任务：把该列表全部任务（含已完成）追加到默认列表末尾
+        const moving = d.tasks
+          .filter((t) => t.listId === id && !t.deletedAt)
+          .sort((a, b) => a.order - b.order);
+        let nextOrder =
+          Math.max(
+            -1,
+            ...d.tasks
+              .filter((t) => t.listId === DEFAULT_LIST_ID && !t.deletedAt)
+              .map((t) => t.order),
+          ) + 1;
+        const movedOrders = new Map<string, number>();
+        for (const task of moving) movedOrders.set(task.id, nextOrder++);
+
+        return {
+          ...d,
+          lists: d.lists.map((l) =>
+            l.id === id ? { ...l, deletedAt: now, ...touch(d.deviceId) } : l,
+          ),
+          tasks: d.tasks.map((t) =>
+            movedOrders.has(t.id)
+              ? {
+                  ...t,
+                  listId: DEFAULT_LIST_ID,
+                  order: movedOrders.get(t.id)!,
+                  ...touch(d.deviceId),
+                }
+              : t,
+          ),
+        };
+      });
       if (get().view.type === "list" && (get().view as { id: string }).id === id) {
         const first = activeLists(get().db)[0];
         set({
@@ -441,6 +462,17 @@ export const useStore = create<StoreState>((set, get) => {
           ? current.filter((gid) => gid !== id)
           : [...current, id];
         return { ...db, settings: { ...db.settings, collapsedGroups } };
+      });
+    },
+
+    toggleSection: (viewKey, sectionKey) => {
+      const current = get().db.settings.collapsedSections ?? {};
+      const list = current[viewKey] ?? defaultCollapsedSections(viewKey);
+      const next = list.includes(sectionKey)
+        ? list.filter((key) => key !== sectionKey)
+        : [...list, sectionKey];
+      get().updateSettings({
+        collapsedSections: { ...current, [viewKey]: next },
       });
     },
 

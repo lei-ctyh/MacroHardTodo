@@ -37,6 +37,33 @@ export function myDayTheme(db: DB): ListTheme | undefined {
   return smartTheme(db, "myday");
 }
 
+function darkenHex(hex: string, amount: number): string {
+  const value = Number.parseInt(hex.slice(1), 16);
+  const r = Math.round(((value >> 16) & 255) * (1 - amount));
+  const g = Math.round(((value >> 8) & 255) * (1 - amount));
+  const b = Math.round((value & 255) * (1 - amount));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
+/**
+ * 主题强调色（星标、已完成勾选圆点等）：
+ * 颜色主题取渐变里最深的色标，图片主题用固定中性色；无主题返回 undefined 交给 CSS 回退。
+ */
+export function themeAccent(
+  theme: ListTheme | undefined,
+): { base: string; hover: string } | undefined {
+  if (!theme) return undefined;
+  let base: string | undefined;
+  if (theme.color) {
+    const stops = theme.color.match(/#[0-9a-fA-F]{6}/g);
+    base = stops?.length ? stops[stops.length - 1] : undefined;
+  } else if (theme.preset || theme.image) {
+    base = "#687681";
+  }
+  if (!base) return undefined;
+  return { base, hover: darkenHex(base, 0.14) };
+}
+
 const imageCache = new Map<string, string>();
 
 /** 解析主题背景：预设返回静态资源地址，自定义图片转成 data URL（并支持跨设备按需下载） */

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -14,10 +14,13 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useStore } from "../store/useStore";
-import { activeLists, activeTasks, DEFAULT_LIST_ID, THEME_COLORS, type ListTheme, type Task } from "../lib/model";
+import { activeLists, DEFAULT_LIST_ID, THEME_COLORS, type ListTheme, type Task } from "../lib/model";
 import {
+  completedTasksForView,
+  defaultCollapsedSections,
   headerInfo,
   searchTasks,
+  sectionsForView,
   sortTasks,
   tasksForView,
   viewKey,
@@ -26,18 +29,18 @@ import {
 import {
   resolveThemeBackground,
   smartTheme,
+  themeAccent,
   themeFallback,
 } from "../lib/themes";
 import { splitLeadingEmoji } from "../lib/emoji";
 import { QuickAdd } from "./QuickAdd";
+import { SectionHeader } from "./SectionHeader";
 import { TaskRow } from "./TaskRow";
 import { SuggestionPanel } from "./SuggestionPanel";
 import { ViewMenu } from "./ViewMenu";
 import {
   AllIcon,
   CalendarIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
   CompletedIcon,
   HomeIcon,
   LightbulbIcon,
@@ -76,8 +79,8 @@ export function MainPane({
   const setSort = useStore((s) => s.setSort);
   const renameList = useStore((s) => s.renameList);
   const deleteList = useStore((s) => s.deleteList);
+  const toggleSection = useStore((s) => s.toggleSection);
 
-  const [showCompleted, setShowCompleted] = useState(false);
   const [bgUrl, setBgUrl] = useState<string | undefined>();
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -106,14 +109,24 @@ export function MainPane({
   const SmartTitleIcon =
     view.type === "smart" ? SMART_TITLE_ICONS[view.id] : null;
 
-  const completedInList = useMemo(
-    () =>
-      view.type === "list"
-        ? activeTasks(db)
-            .filter((t) => t.listId === view.id && t.completed)
-            .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
-        : [],
-    [db, view],
+  const groupedView =
+    view.type === "smart" &&
+    (view.id === "all" || view.id === "completed" || view.id === "planned");
+  const sectionCount =
+    view.type === "smart" && (view.id === "all" || view.id === "planned");
+  const sectionListName = view.type === "smart" && view.id === "planned";
+  const collapsed =
+    db.settings.collapsedSections?.[viewKey(view)] ??
+    defaultCollapsedSections(viewKey(view));
+
+  const sections = useMemo(
+    () => (groupedView ? sectionsForView(db, view, visible) : []),
+    [db, view, visible, groupedView],
+  );
+
+  const completedTasks = useMemo(
+    () => searchTasks(completedTasksForView(db, view), query),
+    [db, view, query],
   );
 
   const targetListId =
@@ -148,11 +161,10 @@ export function MainPane({
     return "";
   })();
 
-  const rowProps = (task: Task) => ({
+  const rowProps = (task: Task, withListName = view.type === "smart") => ({
     task,
     selected: task.id === selectedTaskId,
-    listName:
-      view.type === "smart" ? listNames.get(task.listId) : undefined,
+    listName: withListName ? listNames.get(task.listId) : undefined,
     onSelect: () => selectTask(task.id === selectedTaskId ? null : task.id),
     onToggle: () => toggleComplete(task.id),
     onToggleStar: () => toggleImportance(task.id),
@@ -299,13 +311,25 @@ export function MainPane({
         : { background: themeFallback(theme) }
     : undefined;
 
+  const accent = themeAccent(theme);
+  const accentStyle = accent
+    ? ({
+        "--theme-accent": accent.base,
+        "--theme-accent-hover": accent.hover,
+      } as CSSProperties)
+    : undefined;
+  const paneStyle =
+    mainStyle || accentStyle
+      ? { ...(mainStyle ?? {}), ...(accentStyle ?? {}) }
+      : undefined;
+
   return (
     <>
     <main
       className={`main ${hasBanner ? "on-image" : ""} ${
         themePhoto ? "on-photo" : ""
       } ${themeLight ? "on-light" : ""}`}
-      style={mainStyle}
+      style={paneStyle}
     >
       <div className="main-header">
         {onOpenSidebar ? (
@@ -365,24 +389,48 @@ export function MainPane({
       </div>
 
       <div className="task-scroll">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={onDragEnd}
-        >
-          <SortableContext
-            items={visible.map((t) => t.id)}
-            strategy={verticalListSortingStrategy}
+        {groupedView ? (
+          sections.map((section) => {
+            const isCollapsed = collapsed.includes(section.key);
+            return (
+              <div key={section.key} className="section-block">
+                <SectionHeader
+                  title={section.title}
+                  count={sectionCount ? section.tasks.length : undefined}
+                  collapsed={isCollapsed}
+                  onToggle={() => toggleSection(viewKey(view), section.key)}
+                />
+                {!isCollapsed
+                  ? section.tasks.map((task) => (
+                      <TaskRow
+                        key={task.id}
+                        {...rowProps(task, sectionListName)}
+                      />
+                    ))
+                  : null}
+              </div>
+            );
+          })
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={onDragEnd}
           >
-            {visible.map((task) =>
-              sortable ? (
-                <SortableTaskRow key={task.id} {...rowProps(task)} />
-              ) : (
-                <TaskRow key={task.id} {...rowProps(task)} />
-              ),
-            )}
-          </SortableContext>
-        </DndContext>
+            <SortableContext
+              items={visible.map((t) => t.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {visible.map((task) =>
+                sortable ? (
+                  <SortableTaskRow key={task.id} {...rowProps(task)} />
+                ) : (
+                  <TaskRow key={task.id} {...rowProps(task)} />
+                ),
+              )}
+            </SortableContext>
+          </DndContext>
+        )}
 
         {isMyDay && visible.length === 0 && !query.trim() ? (
           <WelcomeCard onAdd={() => focusQuickAdd()} />
@@ -398,18 +446,16 @@ export function MainPane({
           </div>
         ) : null}
 
-        {completedInList.length > 0 ? (
-          <div className="suggestion-block">
-            <div
-              className="suggestion-title"
-              style={{ cursor: "pointer" }}
-              onClick={() => setShowCompleted((v) => !v)}
-            >
-              {showCompleted ? <ChevronDownIcon /> : <ChevronRightIcon />}
-              已完成 {completedInList.length}
-            </div>
-            {showCompleted
-              ? completedInList.map((task) => (
+        {completedTasks.length > 0 ? (
+          <div className="section-block">
+            <SectionHeader
+              title="已完成"
+              count={completedTasks.length}
+              collapsed={collapsed.includes("completed")}
+              onToggle={() => toggleSection(viewKey(view), "completed")}
+            />
+            {!collapsed.includes("completed")
+              ? completedTasks.map((task) => (
                   <TaskRow key={task.id} {...rowProps(task)} />
                 ))
               : null}

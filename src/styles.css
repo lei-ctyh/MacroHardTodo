@@ -921,22 +921,13 @@ select {
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
 }
 
-.main.on-image .suggestion-block {
-  border-top-color: rgba(255, 255, 255, 0.28);
+.main.on-image .section-title {
+  color: #1f1f1f;
+  background: rgba(255, 255, 255, 0.7);
 }
 
-.main.on-image .suggestion-title {
-  color: #fff;
-  background: rgba(0, 0, 0, 0.32);
-  border-radius: 6px;
-  padding: 6px 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.main.on-image .suggestion-title button {
-  color: #fff;
+.main.on-image .section-title:hover {
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .main.on-image.on-light .main-title {
@@ -968,17 +959,13 @@ select {
   text-shadow: none;
 }
 
-.main.on-image.on-light .suggestion-block {
-  border-top-color: var(--border);
+.main.on-image.on-light .section-title {
+  color: #1f1f1f;
+  background: rgba(255, 255, 255, 0.7);
 }
 
-.main.on-image.on-light .suggestion-title {
-  color: var(--text);
-  background: rgba(0, 0, 0, 0.06);
-}
-
-.main.on-image.on-light .suggestion-title button {
-  color: var(--text);
+.main.on-image.on-light .section-title:hover {
+  background: rgba(255, 255, 255, 0.82);
 }
 
 .main.on-image.on-light .task-scroll {
@@ -1526,17 +1513,17 @@ select {
     transform 0.1s ease;
 }
 .checkbox:hover {
-  border-color: var(--accent);
+  border-color: var(--theme-accent, var(--accent));
 }
 .checkbox:active {
   transform: scale(0.88);
 }
 .checkbox.checked {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--theme-accent, var(--accent));
+  border-color: var(--theme-accent, var(--accent));
 }
 .checkbox.checked:hover {
-  background: var(--accent-hover);
+  background: var(--theme-accent-hover, var(--accent-hover));
 }
 .checkbox svg {
   opacity: 0;
@@ -1550,12 +1537,12 @@ select {
   transform: scale(1);
 }
 .checkbox.partial {
-  border-color: var(--accent);
+  border-color: var(--theme-accent, var(--accent));
 }
 .checkbox.partial svg {
   opacity: 1;
   transform: scale(1);
-  color: var(--accent);
+  color: var(--theme-accent, var(--accent));
   width: 10px;
   height: 10px;
 }
@@ -1566,7 +1553,7 @@ select {
 .nav-item svg,
 .sidebar-action svg,
 .icon-btn svg,
-.suggestion-title svg {
+.section-title svg {
   width: 20px;
   height: 20px;
 }
@@ -1639,16 +1626,16 @@ select {
   color: var(--star);
 }
 .task-row .row-star {
-  opacity: 0;
+  opacity: 1;
   align-self: flex-start;
   margin-top: 2px;
+  color: var(--text-tertiary);
 }
-.task-row:hover .row-star,
-.task-row .row-star.on {
-  opacity: 1;
+.task-row .row-star:hover {
+  color: var(--text-secondary);
 }
 .task-row .row-star.on {
-  color: var(--star);
+  color: var(--theme-accent, var(--star));
 }
 
 .task-notes-preview {
@@ -1760,28 +1747,41 @@ select {
   margin-bottom: 6px;
 }
 
-.suggestion-block {
-  margin-top: 18px;
-  border-top: 1px solid var(--border);
-  padding-top: 6px;
+.section-block {
+  margin-top: 11px;
+  padding-top: 2px;
 }
-.suggestion-title {
-  display: flex;
+.section-title {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  padding: 10px 8px 4px;
+  height: 36px;
+  padding: 0 12px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 4px;
+  background: var(--hover);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease;
 }
-.suggestion-title button {
-  font-size: 12px;
-  color: var(--accent);
-  margin-left: auto;
-  font-weight: 500;
+.section-title:hover {
+  background: var(--nav-hover);
 }
-.suggestion-title button:hover {
-  text-decoration: underline;
+.section-title svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+.section-count {
+  margin-left: 2px;
+  color: inherit;
+  opacity: 0.72;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------------- 详情面板 ---------------- */

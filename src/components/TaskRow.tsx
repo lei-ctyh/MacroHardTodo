@@ -10,6 +10,7 @@ import {
   ListIcon,
   RepeatIcon,
   StarFilledIcon,
+  StarOutlineIcon,
   SunIcon,
 } from "./icons";
 
@@ -79,6 +80,7 @@ export function TaskRow({
     meta.push(
       <span key="myday" className="meta" title="我的一天">
         <SunIcon />
+        我的一天
       </span>,
     );
   }
@@ -132,7 +134,7 @@ export function TaskRow({
         }}
         aria-label="标记重要"
       >
-        <StarFilledIcon />
+        {task.importance === "high" ? <StarFilledIcon /> : <StarOutlineIcon />}
       </button>
     </div>
   );

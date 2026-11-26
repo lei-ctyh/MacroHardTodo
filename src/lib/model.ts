@@ -134,6 +134,8 @@ export interface Settings {
   sortBy?: Record<string, SortKey>;
   /** 已折叠的分组 id；仅本地保存 */
   collapsedGroups: string[];
+  /** 各视图已折叠的任务分组 key（`viewKey` → section keys）；仅本地保存 */
+  collapsedSections?: Record<string, string[]>;
   /** 侧栏宽度（px）；仅本地保存 */
   sidebarWidth?: number;
   /** 本地头像；仅本地保存 */

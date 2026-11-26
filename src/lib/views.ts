@@ -1,5 +1,7 @@
 import { matchesQuery } from "./search";
 import {
+  activeGroups,
+  activeLists,
   activeTasks,
   taskById,
   type DB,
@@ -9,7 +11,7 @@ import {
   type TaskGroup,
   type TaskList,
 } from "./model";
-import { isOverdue, todayISO } from "./dates";
+import { addDaysISO, dateToISO, isOverdue, isoToDate, todayISO } from "./dates";
 
 export type View =
   | { type: "smart"; id: SmartViewId }
@@ -93,8 +95,9 @@ export function tasksForView(db: DB, view: View): Task[] {
         .filter((t) => !t.completed && t.importance === "high")
         .sort((a, b) => a.order - b.order);
     case "planned":
+      // 计划内把已完成任务也留在日期分组里（组内划线显示），智能计数仍只算未完成
       return all
-        .filter((t) => !t.completed && (t.dueDate || t.reminderAt))
+        .filter((t) => t.dueDate || t.reminderAt)
         .sort((a, b) => compareDueDate(a, b) || a.order - b.order);
     case "completed":
       return all
@@ -109,6 +112,181 @@ export function tasksForView(db: DB, view: View): Task[] {
 export function searchTasks(tasks: Task[], query: string): Task[] {
   if (!query.trim()) return tasks;
   return tasks.filter((t) => matchesQuery(t, query));
+}
+
+/** 视图内的任务分组（计划内日期桶 / 全部与已完成按列表分组） */
+export interface TaskSection {
+  /** list:<id> | overdue | today | tomorrow | next5 | later */
+  key: string;
+  /** 组标题；全部/已完成为列表原始名称（保留开头 emoji） */
+  title: string;
+  /** 已按当前视图排序 */
+  tasks: Task[];
+}
+
+export type PlannedBucketKey = "overdue" | "today" | "tomorrow" | "next5" | "later";
+
+/** 计划内任务的生效日期：截止日期优先，否则取提醒时间的日期 */
+function effectiveDate(task: Task): string | undefined {
+  if (task.dueDate) return task.dueDate;
+  if (task.reminderAt != null) return dateToISO(new Date(task.reminderAt));
+  return undefined;
+}
+
+/** 计划内日期桶：逾期按日期比较（今天已过点仍留在「今天」） */
+export function plannedBucketKey(
+  task: Task,
+  today: string,
+  tomorrow: string,
+  next5End: string,
+): PlannedBucketKey {
+  const date = effectiveDate(task);
+  if (!date) return "later";
+  if (date < today) return "overdue";
+  if (date === today) return "today";
+  if (date === tomorrow) return "tomorrow";
+  if (date <= next5End) return "next5";
+  return "later";
+}
+
+/** 计划内「接下来 5 天」标题：M月d日,周X到M月d日,周X */
+export function plannedRangeTitle(start: Date, end: Date): string {
+  const label = (d: Date) =>
+    `${d.getMonth() + 1}月${d.getDate()}日,周${"日一二三四五六"[d.getDay()]}`;
+  return `${label(start)}到${label(end)}`;
+}
+
+function byCompletedAtDesc(a: Task, b: Task): number {
+  return (b.completedAt ?? 0) - (a.completedAt ?? 0);
+}
+
+function plannedSections(db: DB, view: View, tasks: Task[]): TaskSection[] {
+  const today = todayISO();
+  const tomorrow = addDaysISO(today, 1);
+  const next5End = addDaysISO(today, 6);
+  const sort = db.settings.sortBy?.[viewKey(view)] ?? "manual";
+
+  const buckets = new Map<PlannedBucketKey, Task[]>();
+  for (const task of tasks) {
+    const key = plannedBucketKey(task, today, tomorrow, next5End);
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(task);
+    else buckets.set(key, [task]);
+  }
+
+  const order: { key: PlannedBucketKey; title: string }[] = [
+    { key: "overdue", title: "已逾期" },
+    { key: "today", title: "今天" },
+    { key: "tomorrow", title: "明天" },
+    {
+      key: "next5",
+      title: plannedRangeTitle(
+        isoToDate(addDaysISO(today, 2)),
+        isoToDate(next5End),
+      ),
+    },
+    { key: "later", title: "以后" },
+  ];
+
+  const sections: TaskSection[] = [];
+  for (const { key, title } of order) {
+    const bucket = buckets.get(key);
+    if (!bucket || bucket.length === 0) continue;
+    sections.push({ key, title, tasks: sortTasks(bucket, sort) });
+  }
+  return sections;
+}
+
+/** 按侧栏顺序把任务按列表分组；找不到所属列表的任务直接跳过 */
+function listTaskSections(
+  db: DB,
+  view: View,
+  tasks: Task[],
+  completed: boolean,
+): TaskSection[] {
+  const lists = activeLists(db);
+  const byId = new Map(lists.map((list) => [list.id, list]));
+  const order = listSections(lists, activeGroups(db)).flatMap((s) => s.ids);
+  const sort = db.settings.sortBy?.[viewKey(view)] ?? "manual";
+
+  const buckets = new Map<string, Task[]>();
+  for (const task of tasks) {
+    if (!byId.has(task.listId)) continue;
+    const bucket = buckets.get(task.listId);
+    if (bucket) bucket.push(task);
+    else buckets.set(task.listId, [task]);
+  }
+
+  const sections: TaskSection[] = [];
+  for (const id of order) {
+    const bucket = buckets.get(id);
+    if (!bucket || bucket.length === 0) continue;
+    sections.push({
+      key: `list:${id}`,
+      title: byId.get(id)!.name,
+      tasks: completed
+        ? bucket.slice().sort(byCompletedAtDesc)
+        : sortTasks(bucket, sort),
+    });
+  }
+  return sections;
+}
+
+/** 需要分组的视图返回分组；平铺视图返回 [] */
+export function sectionsForView(
+  db: DB,
+  view: View,
+  tasks: Task[],
+): TaskSection[] {
+  if (view.type !== "smart") return [];
+  switch (view.id) {
+    case "planned":
+      return plannedSections(db, view, tasks);
+    case "all":
+      return listTaskSections(db, view, tasks, false);
+    case "completed":
+      return listTaskSections(db, view, tasks, true);
+    default:
+      return [];
+  }
+}
+
+/**
+ * 视图分组的默认折叠状态（本地未记录时使用）。
+ * 平铺视图（列表 / 我的一天 / 重要）底部的「已完成」区默认折叠，与旧行为一致；
+ * 计划内 / 全部 / 已完成的列表或日期分组默认展开。
+ */
+export function defaultCollapsedSections(viewKey: string): string[] {
+  return viewKey.startsWith("list:") ||
+    viewKey === "smart:myday" ||
+    viewKey === "smart:important"
+    ? ["completed"]
+    : [];
+}
+
+/** 底部「已完成 N」区；返回 [] 表示该视图不显示已完成区 */
+export function completedTasksForView(db: DB, view: View): Task[] {
+  const all = activeTasks(db);
+  if (view.type === "list") {
+    return all
+      .filter((t) => t.listId === view.id && t.completed)
+      .sort(byCompletedAtDesc);
+  }
+  switch (view.id) {
+    case "myday":
+      return all
+        .filter((t) => t.completed && t.myDay === todayISO())
+        .sort(byCompletedAtDesc);
+    case "important":
+      return all
+        .filter((t) => t.completed && t.importance === "high")
+        .sort(byCompletedAtDesc);
+    case "planned":
+    case "all":
+    case "completed":
+    default:
+      return [];
+  }
 }
 
 export function smartCounts(db: DB): Record<SmartViewId, number> {
