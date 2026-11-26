@@ -17,6 +17,7 @@ MacroHardTodo/
 │   │   ├── MainPane.tsx      header, task list, bottom QuickAdd, theme background
 │   │   ├── ViewMenu.tsx      top-right menu (sort flyout, theme grid/upload, list colors, actions)
 │   │   ├── GroupRow.tsx      sidebar group header (collapse, inline rename, hover menu, droppable)
+│   │   ├── SectionHeader.tsx view-level section header (task-list/date groups, completed area)
 │   │   ├── TaskRow.tsx
 │   │   ├── TaskDetail.tsx    right-side detail panel
 │   │   ├── QuickAdd.tsx      fixed bottom add bar
@@ -28,7 +29,7 @@ MacroHardTodo/
 │   │   ├── model.ts          DB/Task/TaskList/TaskGroup/Step/Theme types + factories
 │   │   ├── merge.ts          per-entity LWW merge, tombstones, dedupe (lists, groups, tasks)
 │   │   ├── recurrence.ts     next-occurrence rules, buildNextTask
-│   │   ├── views.ts          smart views, per-view sorting, counts, suggestion groups, sidebar sections
+│   │   ├── views.ts          smart views, per-view sorting, counts, suggestion groups, sidebar sections, view-level task grouping
 │   │   ├── dates.ts          date formatting helpers
 │   │   ├── themes.ts         preset backgrounds, theme image resolution
 │   │   ├── graphImport.ts    Microsoft Graph mapping + idempotent import
@@ -42,7 +43,7 @@ MacroHardTodo/
 │   ├── capabilities/default.json
 │   └── tauri.conf.json
 ├── public/backgrounds/*.svg  8 built-in theme backgrounds
-├── tests/                    Vitest specs for pure lib code
+├── tests/                    Vitest specs for pure lib code and store mutations
 └── .trellis/                 Trellis workflow, spec, tasks
 ```
 
