@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "前端栈、纯函数位置、质量检查命令与本地/持久化状态约定"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "新增 SectionHeader 组件与 MainPane 渲染拆分需遵循的组件约定"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "views.ts 纯函数与 components 目录的放置规范"}
