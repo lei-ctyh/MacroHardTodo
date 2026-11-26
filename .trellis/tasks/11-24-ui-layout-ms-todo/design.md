@@ -337,10 +337,10 @@ footer: [ + 新建列表 ][ □+ 创建新组 ]
 
 ## Content Header Metrics (Microsoft-matched)
 
-- `.main-header` padding `40px 32px 6px 44px` (same 40px top with `.main.on-image`); `.main-title` is 32px/40px, weight 600, letter-spacing -0.3px.
-- The title starts with `.header-title-icon`: a 32×40px inline-flex slot + 8px gap. The icon starts at 44px and the title text at 84px from the content pane's left edge; Microsoft measures ≈45px and ≈85px.
+- `.main-header` padding `40px 32px 6px 44px` (same 40px top with `.main.on-image`); `.main-title` is 28px/36px (Fluent Title2), weight 600, letter-spacing -0.2px.
+- The title starts with `.header-title-icon`: a 32×36px inline-flex slot + 8px gap. The icon starts at 44px and the title text at 84px from the content pane's left edge; Microsoft measures ≈45px and ≈85px.
 - Icon precedence: smart views always use their fixed sidebar icon (My Day sun, 重要 star, 计划内 calendar, 全部 infinity, 已完成 circled check); the default 任务 always uses the house; custom lists use `theme.emoji` → list-lines glyph. The system icons use `currentColor`, so they turn white with the title on theme backgrounds.
-- `.main-title .header-emoji` is 28px inside the slot; no extra margin. The slot stays rendered for every view, keeping the title x-position stable.
+- `.main-title .header-emoji` is 26px inside the slot; no extra margin. The slot stays rendered for every view, keeping the title x-position stable.
 - `.task-scroll` padding `10px 56px 8px 64px`; `.quick-add` margin `16px 66px 16px 64px`. Task cards therefore start 20px right of the title text (64 vs 84), matching the reference.
 - The count subtitle (`N 项任务` / `N 项已完成`) is removed for non-MyDay views; only My Day renders `.main-subtitle` with its date. `MainPane` composes `subtitle` as `""` otherwise and conditionally renders it.
 - The Microsoft 计划内 task-group headers (先前 / 今天 / 稍后) are explicitly out of scope for this title pass.

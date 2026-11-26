@@ -65,7 +65,7 @@ Make navigation, search, and top-right actions mirror Microsoft To Do so the app
 - [ ] On Windows 11 the native title bar background matches the sidebar in light and dark themes, and keeps native minimize/maximize/close behavior.
 - [ ] Clicking the brand/account area opens a dropdown with 同步 (showing status) and 设置; the footer contains only the new-list/new-group row.
 - [ ] Existing list actions (rename/theme/delete) and sorting continue to work for grouped lists.
-- [ ] The content header title matches the Microsoft To Do metrics: 32px/40px, icon starts at 44px, title text at 84px, task cards and QuickAdd at 64px; the 计划内 page has no count subtitle, while My Day keeps its date.
+- [ ] The content header title matches the Microsoft To Do metrics: 28px/36px, icon starts at 44px, title text at 84px, task cards and QuickAdd at 64px; the 计划内 page has no count subtitle, while My Day keeps its date.
 - [ ] Tasks in every smart view, including 已完成, show the source list name in the task meta; list views omit it because the list is already the context.
 - [ ] The 重要 page (with a background theme) and the 计划内 / 已完成 pages (without one) render task rows with identical background, 1px border, 4px radius, 2px gap, shadow, padding, hover, and selected styles.
 - [ ] With more tasks than fit, a thin scrollbar is visible, the scroll viewport and add bar keep a 16px page-background gap at every scroll position, scrolling to the bottom leaves the last task fully above the add bar with a ~24px gap, and the add bar's right edge lines up with the task cards.

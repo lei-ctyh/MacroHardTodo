@@ -717,10 +717,10 @@ select {
 }
 
 .main-title {
-  font-size: 32px;
-  line-height: 40px;
+  font-size: 28px;
+  line-height: 36px;
   font-weight: 600;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -766,13 +766,13 @@ select {
   align-items: center;
   justify-content: center;
   width: 32px;
-  height: 40px;
+  height: 36px;
   margin-right: 8px;
   vertical-align: top;
 }
 
 .header-emoji {
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1;
 }
 
