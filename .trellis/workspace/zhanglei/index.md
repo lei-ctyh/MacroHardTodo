@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 1
+- **Total Sessions**: 2
 - **Last Active**: 2026-11-26
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~31 | Active |
+| `journal-1.md` | ~54 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 2 | 2026-11-26 | View grouping: planned date buckets, per-list groups, theme accents | `0430ccf`, `4e4f468` | `master` |
 | 1 | 2026-11-26 | UI alignment: context menus, emoji icons, Fluent title, responsive polish | `b4f23f7`, `a09cc10`, `562e9d2` | `master` |
 <!-- @@@/auto:session-history -->
 
