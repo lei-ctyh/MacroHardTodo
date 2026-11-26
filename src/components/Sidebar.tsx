@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
   DndContext,
@@ -20,16 +21,23 @@ import {
   DEFAULT_LIST_ID,
   activeGroups,
   activeLists,
+  type TaskGroup,
   type TaskList,
 } from "../lib/model";
 import { listCounts, listSections, moveList, smartCounts, UNGROUPED_SECTION_KEY } from "../lib/views";
+import { splitLeadingEmoji } from "../lib/emoji";
 import { api } from "../lib/api";
 import { useStore } from "../store/useStore";
 import {
   AllIcon,
   CalendarIcon,
+  CheckSmallIcon,
+  ChevronRightIcon,
   CloudIcon,
   CompletedIcon,
+  EditIcon,
+  FolderIcon,
+  GroupIcon,
   HomeIcon,
   ListLinesIcon,
   NewGroupIcon,
@@ -38,6 +46,8 @@ import {
   SettingsIcon,
   StarOutlineIcon,
   SunIcon,
+  TrashIcon,
+  UngroupIcon,
 } from "./icons";
 import { GroupRow } from "./GroupRow";
 
@@ -74,6 +84,8 @@ export function Sidebar() {
   const openDialog = useStore((s) => s.openDialog);
   const sync = useStore((s) => s.sync);
   const addList = useStore((s) => s.addList);
+  const renameList = useStore((s) => s.renameList);
+  const deleteList = useStore((s) => s.deleteList);
   const addGroup = useStore((s) => s.addGroup);
   const renameGroup = useStore((s) => s.renameGroup);
   const deleteGroup = useStore((s) => s.deleteGroup);
@@ -262,12 +274,42 @@ export function Sidebar() {
     if (id) setView({ type: "list", id });
   };
 
+  // Enter 与失焦都提交；空白名称视为取消
+  const commitNewList = () => {
+    const name = newName.trim();
+    setAdding(false);
+    setNewName("");
+    if (!name) return;
+    const id = addList(name);
+    if (id) setView({ type: "list", id });
+  };
+
+  const moveListToGroup = (listId: string, groupId?: string) => {
+    if (groupId && collapsedGroups.includes(groupId)) {
+      toggleGroupCollapsed(groupId);
+    }
+    const moved = moveList(
+      listSections(lists, groups),
+      listId,
+      `group:${groupId ?? UNGROUPED_SECTION_KEY}`,
+    );
+    if (!moved) return;
+    const entries = moved.flatMap((section) =>
+      section.ids.map((id) => ({ id, groupId: section.groupId })),
+    );
+    reorganizeLists(entries);
+  };
+
   const listRow = (list: TaskList) => (
     <SortableListRow
       key={list.id}
       list={list}
       count={perList[list.id] ?? 0}
       active={view.type === "list" && view.id === list.id}
+      groups={groups}
+      onRename={(name) => renameList(list.id, name)}
+      onDelete={() => deleteList(list.id)}
+      onMoveToGroup={(groupId) => moveListToGroup(list.id, groupId)}
       onSelect={() => setView({ type: "list", id: list.id })}
     />
   );
@@ -462,9 +504,11 @@ export function Sidebar() {
             <div ref={addRowRef} className="nav-item" style={{ background: "var(--hover)" }}>
               <span className="nav-icon">
                 <span
-                  className="nav-list-dot"
-                  style={{ background: "var(--accent)" }}
-                />
+                  className="nav-list-glyph"
+                  style={{ color: "var(--accent)" }}
+                >
+                  <ListLinesIcon size={16} strokeWidth={1.5} />
+                </span>
               </span>
               <input
                 autoFocus
@@ -474,18 +518,14 @@ export function Sidebar() {
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    const id = addList(newName);
-                    setAdding(false);
-                    setNewName("");
-                    if (id) setView({ type: "list", id });
+                    e.preventDefault();
+                    commitNewList();
                   } else if (e.key === "Escape") {
                     setAdding(false);
                     setNewName("");
                   }
                 }}
-                onBlur={() => {
-                  if (!newName.trim()) setAdding(false);
-                }}
+                onBlur={commitNewList}
               />
             </div>
           ) : null}
@@ -541,44 +581,232 @@ function SortableListRow({
   list,
   count,
   active,
+  groups,
   onSelect,
+  onRename,
+  onDelete,
+  onMoveToGroup,
 }: {
   list: TaskList;
   count: number;
   active: boolean;
+  groups: TaskGroup[];
   onSelect: () => void;
+  onRename: (name: string) => void;
+  onDelete: () => void;
+  onMoveToGroup: (groupId?: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: list.id });
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(list.name);
+  const menuRef = useRef<HTMLDivElement>(null);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.45 : 1,
   };
 
+  useEffect(() => {
+    if (!menuPos) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuPos(null);
+        setMoveOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenuPos(null);
+        setMoveOpen(false);
+      } else if (event.key === "Delete") {
+        setMenuPos(null);
+        setMoveOpen(false);
+        onDelete();
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuPos, onDelete]);
+
+  const closeMenu = () => {
+    setMenuPos(null);
+    setMoveOpen(false);
+  };
+
+  const startRename = () => {
+    setDraft(list.name);
+    setEditing(true);
+    closeMenu();
+  };
+
+  const finishRename = (commit: boolean) => {
+    setEditing(false);
+    if (!commit) return;
+    const value = draft.trim();
+    if (value && value !== list.name) onRename(value);
+  };
+
+  const display = splitLeadingEmoji(list.name);
+  const iconEmoji = display.emoji ?? list.theme?.emoji;
+  const label = display.emoji ? display.text || display.emoji : list.name;
+
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`nav-item ${active ? "active" : ""}`}
-      onClick={onSelect}
-      {...attributes}
-      {...listeners}
-    >
-      <span className="nav-icon">
-        {list.theme?.emoji ? (
-          <span className="nav-emoji">{list.theme.emoji}</span>
+    <>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`nav-item ${active ? "active" : ""}`}
+        onClick={onSelect}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          const width = 240;
+          const height = 200;
+          setMoveOpen(false);
+          setMenuPos({
+            x: Math.min(event.clientX, window.innerWidth - width),
+            y: Math.min(event.clientY, window.innerHeight - height),
+          });
+        }}
+        {...attributes}
+        {...listeners}
+      >
+        <span className="nav-icon">
+          {iconEmoji ? (
+            <span className="nav-emoji">{iconEmoji}</span>
+          ) : (
+            <span
+              className="nav-list-glyph"
+              style={{ color: "var(--accent)" }}
+            >
+              <ListLinesIcon size={16} strokeWidth={1.5} />
+            </span>
+          )}
+        </span>
+        {editing ? (
+          <input
+            className="nav-rename-input"
+            autoFocus
+            value={draft}
+            aria-label="列表名称"
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => finishRename(true)}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                finishRename(true);
+              } else if (e.key === "Escape") {
+                e.stopPropagation();
+                finishRename(false);
+              }
+            }}
+          />
         ) : (
-          <span
-            className="nav-list-glyph"
-            style={{ color: "var(--accent)" }}
-          >
-            <ListLinesIcon size={16} strokeWidth={1.5} />
-          </span>
+          <span className="nav-label">{label}</span>
         )}
-      </span>
-      <span className="nav-label">{list.name}</span>
-      {count > 0 ? <span className="nav-count">{count}</span> : null}
-    </div>
+        {count > 0 ? <span className="nav-count">{count}</span> : null}
+      </div>
+
+      {menuPos
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="menu list-menu"
+              role="menu"
+              aria-label={`${list.name} 菜单`}
+              style={{ position: "fixed", left: menuPos.x, top: menuPos.y }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <button role="menuitem" onClick={startRename}>
+                <EditIcon /> 重命名列表
+              </button>
+              {groups.length > 0 ? (
+                <div
+                  className="list-menu-flyout"
+                  onMouseEnter={() => setMoveOpen(true)}
+                  onMouseLeave={() => setMoveOpen(false)}
+                >
+                  <button
+                    role="menuitem"
+                    aria-haspopup="menu"
+                    aria-expanded={moveOpen}
+                    onClick={() => setMoveOpen((open) => !open)}
+                  >
+                    <FolderIcon /> 将列表移动到…
+                    <span className="menu-caret">
+                      <ChevronRightIcon size={16} strokeWidth={1.5} />
+                    </span>
+                  </button>
+                  {moveOpen ? (
+                    <div
+                      className="menu list-submenu"
+                      role="menu"
+                      aria-label="移动到分组"
+                    >
+                      {groups.map((group) => {
+                        const current = list.groupId === group.id;
+                        return (
+                          <button
+                            key={group.id}
+                            role="menuitemradio"
+                            aria-checked={current}
+                            onClick={() => {
+                              closeMenu();
+                              if (!current) onMoveToGroup(group.id);
+                            }}
+                          >
+                            <GroupIcon />
+                            <span>{group.name}</span>
+                            {current ? (
+                              <span className="menu-check">
+                                <CheckSmallIcon size={14} strokeWidth={2} />
+                              </span>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                      {list.groupId ? (
+                        <button
+                          role="menuitem"
+                          onClick={() => {
+                            closeMenu();
+                            onMoveToGroup(undefined);
+                          }}
+                        >
+                          <UngroupIcon /> 移出分组
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              <div className="sep" />
+              <button
+                role="menuitem"
+                className="danger"
+                onClick={() => {
+                  closeMenu();
+                  onDelete();
+                }}
+              >
+                <TrashIcon /> 删除列表
+                <span className="menu-hint">Delete</span>
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }

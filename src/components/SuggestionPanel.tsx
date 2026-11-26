@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useStore } from "../store/useStore";
 import { activeLists, type Task } from "../lib/model";
 import { myDaySuggestionGroups, stepProgress } from "../lib/views";
+import { splitLeadingEmoji } from "../lib/emoji";
 import { dueLabel, isOverdue, todayISO } from "../lib/dates";
 import { CloseIcon, PlusIcon } from "./icons";
 
@@ -19,7 +20,10 @@ export function SuggestionPanel({
   const groups = useMemo(() => myDaySuggestionGroups(db), [db]);
   const listNames = useMemo(() => {
     const map = new Map<string, string>();
-    for (const list of activeLists(db)) map.set(list.id, list.name);
+    for (const list of activeLists(db)) {
+      const display = splitLeadingEmoji(list.name);
+      map.set(list.id, display.emoji ? display.text || display.emoji : list.name);
+    }
     return map;
   }, [db]);
 

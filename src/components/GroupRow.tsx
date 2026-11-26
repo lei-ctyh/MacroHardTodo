@@ -5,6 +5,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { useDroppable } from "@dnd-kit/core";
 import type { TaskGroup } from "../lib/model";
 import {
@@ -111,11 +112,29 @@ export function GroupRow({
   };
 
   return (
-    <div className="group-section" ref={setNodeRef}>
+    <div
+      className={`group-section ${empty ? "group-section-empty" : ""} ${
+        dropTarget ? "group-drop-target" : ""
+      }`}
+      ref={setNodeRef}
+      onContextMenu={empty ? openGroupMenu : undefined}
+    >
       <div
-        className={`group-row ${dropTarget ? "group-drop-target" : ""}`}
-        onDoubleClick={startRename}
-        onContextMenu={openGroupMenu}
+        className={`group-row ${
+          !empty && dropTarget ? "group-drop-target" : ""
+        }`}
+        onClick={(e) => {
+          if (editing) return;
+          if (
+            (e.target as HTMLElement).closest(
+              ".group-caret, .group-name-input",
+            )
+          ) {
+            return;
+          }
+          onToggle();
+        }}
+        onContextMenu={empty ? undefined : openGroupMenu}
       >
         <span className="group-icon">
           <GroupIcon strokeWidth={1.5} />
@@ -148,8 +167,10 @@ export function GroupRow({
           title={collapsed ? "展开分组" : "折叠分组"}
           aria-label={collapsed ? "展开分组" : "折叠分组"}
           aria-expanded={!collapsed}
-          onClick={onToggle}
-          onDoubleClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
         >
           {collapsed ? (
             <ChevronDownIcon size={16} strokeWidth={1.5} />
@@ -159,58 +180,64 @@ export function GroupRow({
         </button>
       </div>
 
-      {menuPos ? (
-        <div
-          ref={menuRef}
-          className="menu group-menu"
-          role="menu"
-          aria-label={`${group.name} 菜单`}
-          style={{ position: "fixed", left: menuPos.x, top: menuPos.y }}
-          onContextMenu={(e) => e.preventDefault()}
-        >
-          <button role="menuitem" onClick={startRename}>
-            <EditIcon /> 重命名组
-          </button>
-          <button
-            role="menuitem"
-            onClick={() => {
-              setMenuPos(null);
-              onAddList();
-            }}
-          >
-            <PlusIcon /> 新建列表
-          </button>
-          <div className="sep" />
-          {empty ? (
-            <button
-              role="menuitem"
-              className="danger"
-              onClick={() => {
-                setMenuPos(null);
-                onDelete();
+      {menuPos
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="menu group-menu"
+              role="menu"
+              aria-label={`${group.name} 菜单`}
+              style={{ position: "fixed", left: menuPos.x, top: menuPos.y }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
               }}
             >
-              <TrashIcon /> 删除组
-              <span className="menu-hint">Delete</span>
-            </button>
-          ) : (
-            <button
-              role="menuitem"
-              onClick={() => {
-                setMenuPos(null);
-                onDelete();
-              }}
-            >
-              <UngroupIcon strokeWidth={1.5} /> 取消分组列表
-            </button>
-          )}
-        </div>
-      ) : null}
+              <button role="menuitem" onClick={startRename}>
+                <EditIcon /> 重命名组
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setMenuPos(null);
+                  onAddList();
+                }}
+              >
+                <PlusIcon /> 新建列表
+              </button>
+              <div className="sep" />
+              {empty ? (
+                <button
+                  role="menuitem"
+                  className="danger"
+                  onClick={() => {
+                    setMenuPos(null);
+                    onDelete();
+                  }}
+                >
+                  <TrashIcon /> 删除组
+                  <span className="menu-hint">Delete</span>
+                </button>
+              ) : (
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuPos(null);
+                    onDelete();
+                  }}
+                >
+                  <UngroupIcon strokeWidth={1.5} /> 取消分组列表
+                </button>
+              )}
+            </div>,
+            document.body,
+          )
+        : null}
 
       {!collapsed ? (
         <div className="group-lists">
           {empty ? (
-            <div className="group-empty">
+            <div className="group-empty" onClick={onToggle}>
               <span className="group-empty-line" />
               拖到此处来添加列表
             </div>

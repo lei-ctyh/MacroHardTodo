@@ -70,8 +70,12 @@
 - [ ] `merge.ts`: merge groups with LWW + tombstones; include groups in `fingerprint`.
 - [ ] `useStore.ts`: `addGroup`, `renameGroup`, `deleteGroup` (keeps lists, clears `groupId`), `reorganizeLists`, `toggleGroupCollapsed`; include groups in `normalizeDb`.
 - [ ] `icons.tsx`: add `SquarePlus` (创建新组).
-- [ ] New `GroupRow.tsx`: chevron collapse, inline rename, hover menu (重命名 / 删除组), droppable section.
-- [ ] `Sidebar.tsx`: render ungrouped lists + group sections; bottom row `[+ 新建列表][□+ 创建新组]`; one `DndContext` with per-section `SortableContext`s and `group:<id>` droppables; `onDragEnd` → `reorganizeLists`.
+- [ ] New `GroupRow.tsx`: whole-row click toggles collapse (rename input excluded, caret stops propagation), inline rename only via the right-click menu (no double-click rename), hover menu (重命名 / 删除组), droppable section, and press/release feedback (`0.985` while held, 200ms spring-back with overshoot on release). Empty groups get `group-section-empty`: hover/drop/press apply to the whole section (header + empty hint) as one rounded block, clicking the hint toggles too, and right-click anywhere in the section opens the group menu (with menu-internal right-clicks stopped).
+- [ ] `styles.css`: use the same press/release transform on `.nav-item` (0.985 while held, spring-back on release) so smart-list/default/custom-list selection matches the group header.
+- [ ] `Sidebar.tsx`: render ungrouped lists + group sections; bottom row `[+ 新建列表][□+ 创建新组]`; one `DndContext` with per-section `SortableContext`s and `group:<id>` droppables; `onDragEnd` → `reorganizeLists`. The inline new-list input commits on Enter **and** blur via a shared `commitNewList` (empty name cancels), Escape cancels.
+- [ ] `SortableListRow`: right-click custom lists opens 重命名列表 (inline sidebar input), 将列表移动到… (flyout with the groups plus 移出分组, only when groups exist), and 删除列表 (danger, Delete hint). Move via `moveList(listSections(...), id, group:<target>)` → `reorganizeLists`, expanding a collapsed target; the default list has no context menu.
+- [ ] Both group and list right-click menus render through `createPortal(..., document.body)` with `position: fixed` + cursor coordinates. They must not live inside `.group-section`/`.nav-item`/`.sidebar`: those carry press-spring transforms (and the sidebar a drawer transform at ≤760px), which turn a transformed ancestor into the containing block for `fixed`, making the menu appear offset/scaled until the transform settles. Portaled menus use z-index 100 to stay above the drawer.
+- [ ] `styles.css`: `.list-menu` 220px, `.list-submenu` 190px opening to the right with a 8px hover bridge, `.nav-rename-input`, and the group/list context-menu layout.
 - [ ] `styles.css`: group header/lists, drop highlight, footer row.
 - [ ] Extend `tests/merge.test.ts` for group merge/tombstone and list `groupId` preservation.
 - [ ] Update frontend specs (directory-structure, state-management, component-guidelines) for groups.
@@ -130,6 +134,8 @@
 
 ## Sidebar Sections & Fixed Icons
 
+- [ ] `src/lib/emoji.ts`: `splitLeadingEmoji(name)` takes the first grapheme (Intl.Segmenter) and, when it is pictographic/flag/keycap, returns `{ emoji, text }`; no match returns `{ text }`. Cover it in `tests/emoji.test.ts` (plain names, leading emoji, whitespace, digits/hash/letters, keycap, flag, ZWJ, skin tone, emoji-only, empty).
+- [ ] Use the split at render time only: sidebar row icon/label, content title icon/text, smart-view list meta and suggestion meta. The stored name keeps the emoji; sidebar and title rename inputs start from the raw name. A stored theme emoji is the fallback icon.
 - [ ] `Sidebar.tsx`: order 我的一天 → 任务 → 重要/计划内/全部/已完成; make the default 任务 row always render `HomeIcon` (ignore its theme emoji).
 - [ ] `MainPane.tsx`: title icon precedence becomes smart fixed icon → default-house → custom-list theme emoji/color/glyph; import `HomeIcon`.
 - [ ] `ViewMenu.tsx`: add `fixedIcon` (smart targets + `DEFAULT_LIST_ID`); show the full theme grid for every view, drop stored/selected emoji for system targets, and keep the custom-image delete; the emoji picker and standalone `ThemePicker` modal are removed.

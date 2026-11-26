@@ -28,6 +28,7 @@ import {
   smartTheme,
   themeFallback,
 } from "../lib/themes";
+import { splitLeadingEmoji } from "../lib/emoji";
 import { QuickAdd } from "./QuickAdd";
 import { TaskRow } from "./TaskRow";
 import { SuggestionPanel } from "./SuggestionPanel";
@@ -86,7 +87,10 @@ export function MainPane({
 
   const listNames = useMemo(() => {
     const map = new Map<string, string>();
-    for (const list of activeLists(db)) map.set(list.id, list.name);
+    for (const list of activeLists(db)) {
+      const display = splitLeadingEmoji(list.name);
+      map.set(list.id, display.emoji ? display.text || display.emoji : list.name);
+    }
     return map;
   }, [db]);
 
@@ -164,6 +168,17 @@ export function MainPane({
 
   const theme: ListTheme | undefined =
     view.type === "list" ? listForTheme?.theme : smartTheme(db, view.id);
+  // 自定义列表：名称开头的 emoji 作为标题图标，其余作为标题文字
+  const listNameDisplay =
+    view.type === "list" ? splitLeadingEmoji(info.title) : null;
+  const titleEmoji =
+    view.type === "list" && view.id !== DEFAULT_LIST_ID
+      ? listNameDisplay?.emoji ?? theme?.emoji
+      : undefined;
+  const titleText =
+    listNameDisplay?.emoji && listNameDisplay.text
+      ? listNameDisplay.text
+      : info.title;
   const themeKey = JSON.stringify(theme ?? null);
   const hasBanner = Boolean(theme?.preset || theme?.image || theme?.color);
   const themePhoto = Boolean(theme?.preset || theme?.image);
@@ -316,8 +331,8 @@ export function MainPane({
                 ) : null
               ) : view.id === DEFAULT_LIST_ID ? (
                 <HomeIcon size={24} strokeWidth={1.5} />
-              ) : theme?.emoji ? (
-                <span className="header-emoji">{theme.emoji}</span>
+              ) : titleEmoji ? (
+                <span className="header-emoji">{titleEmoji}</span>
               ) : (
                 <ListLinesIcon size={24} strokeWidth={1.5} />
               )}
@@ -341,7 +356,7 @@ export function MainPane({
                 }}
               />
             ) : (
-              info.title
+              titleText
             )}
           </div>
           {subtitle ? <div className="main-subtitle">{subtitle}</div> : null}

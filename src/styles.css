@@ -325,7 +325,15 @@ select {
   font-size: 14px;
   white-space: nowrap;
   background: transparent;
-  transition: background 0.12s ease;
+  transition:
+    background 0.12s ease,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-item:active {
+  transform: scale(0.985);
+  transition-duration: 0.08s;
+  transition-timing-function: ease-out;
 }
 
 /* 内嵌高亮：上下左右都留间隙，不铺满整行 */
@@ -401,13 +409,6 @@ select {
   flex: 0 0 auto;
 }
 
-.nav-list-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-}
-
 .nav-list-glyph {
   width: 20px;
   height: 20px;
@@ -438,11 +439,51 @@ select {
   font-size: 14px;
   font-weight: 400;
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition:
+    background 0.12s ease,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.group-row:active {
+  transform: scale(0.985);
+  transition-duration: 0.08s;
+  transition-timing-function: ease-out;
 }
 
 .group-row:hover {
   background: var(--nav-hover);
+}
+
+.group-section.group-section-empty {
+  border-radius: var(--radius);
+  cursor: pointer;
+  transform-origin: center;
+  transition:
+    background 0.12s ease,
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.group-section.group-section-empty:active {
+  transform: scale(0.985);
+  transition-duration: 0.08s;
+  transition-timing-function: ease-out;
+}
+
+.group-section.group-section-empty .group-row:active {
+  transform: none;
+}
+
+.group-section.group-section-empty:hover {
+  background: var(--nav-hover);
+}
+
+.group-section.group-section-empty .group-row:hover {
+  background: transparent;
+}
+
+.group-section.group-section-empty.group-drop-target {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .group-icon {
@@ -465,6 +506,7 @@ select {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  user-select: none;
 }
 
 .group-row.group-drop-target {
@@ -497,8 +539,52 @@ select {
   background: var(--bg-input);
 }
 
+/* 右键菜单挂到 body 上：避免侧栏/群组容器上的 transform 改变 fixed 定位基准 */
+.menu.group-menu,
+.menu.list-menu {
+  z-index: 100;
+}
+
 .group-menu {
   min-width: 200px;
+}
+
+.menu.list-menu {
+  min-width: 220px;
+}
+
+.list-menu-flyout {
+  position: relative;
+}
+
+.list-menu-flyout::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -8px;
+  width: 8px;
+  height: 100%;
+}
+
+.menu.list-submenu {
+  position: absolute;
+  top: -4px;
+  left: calc(100% + 4px);
+  min-width: 190px;
+}
+
+.list-submenu .menu-check {
+  margin-left: auto;
+}
+
+.nav-rename-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  padding: 3px 4px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--bg-input);
 }
 
 .menu-hint {
