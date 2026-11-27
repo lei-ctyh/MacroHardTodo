@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 9
+- **Total Sessions**: 10
 - **Last Active**: 2026-11-27
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~239 | Active |
+| `journal-1.md` | ~270 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 10 | 2026-11-27 | Suggestion panel polish and seamless return from TaskDetail | `1b815b8` | `master` |
 | 9 | 2026-11-27 | Task list alignment and flyout submenu viewport clamping | `088651e`, `754b688`, `d33066f` | `master` |
 | 8 | 2026-11-27 | TaskDetail polish, inline input focus, and planned/completed alignment | `ba9be11`, `48462b0`, `cf0feb2` | `master` |
 | 7 | 2026-11-27 | Task row right-click context menu and shortcuts | `30ddea3`, `d26105a` | `master` |

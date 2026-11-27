@@ -237,3 +237,34 @@ Aligned TaskRow 2-line card layout, middle-dot metadata, overdue recurring amber
 ### Status
 
 [OK] **Completed**
+
+
+## Session 10: Suggestion panel polish and seamless return from TaskDetail
+<!-- trellis-session: v=2 fp=b86b87d5ed3b84fb -->
+
+**Date**: 2026-11-27
+**Task**: Suggestion panel polish and seamless return from TaskDetail
+**Branch**: `master`
+
+### Summary
+
+Removed count badge from SuggestionPanel header, aligned suggestion row step/date formatting, and made closing a TaskDetail opened from Suggestions return seamlessly to Suggestions with zero layout shift.
+
+### Main Changes
+
+- SuggestionPanel: removed N 项 header count badge and aligned step/date metadata formatting with TaskRow
+- MainPane & CSS: unified SuggestionPanel width with --detail-w (375px), swapped Detail <-> Suggestions synchronously in the same render frame, and skipped slideIn animation when returning from Detail
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1b815b8` | fix: refine suggestion panel header and seamless return from task detail |
+
+### Testing
+
+- [OK] tsc --noEmit (0 errors), vitest run (11 files / 87 tests passed), npm run build (succeeded)
+
+### Status
+
+[OK] **Completed**
