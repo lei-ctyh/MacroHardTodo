@@ -146,3 +146,26 @@ Replaced hardcoded local user/data strings with customizable profileName and pro
 ### Status
 
 [OK] **Completed**
+
+
+## Session 7: Task row right-click context menu and shortcuts
+<!-- trellis-session: v=2 fp=c1054e70af6411cf -->
+
+**Date**: 2026-11-27
+**Task**: Task row right-click context menu and shortcuts
+**Branch**: `master`
+
+### Summary
+
+Added portaled TaskContextMenu matching Microsoft To Do proportions (264px width, 38px rows, muted 18px icons, state-specific circle/star-off/calendar/list-move icons, full-bleed separators) with My Day, importance, complete, due-date presets + portaled DateTimePicker, auto-flipping move-to-list flyout, and confirm-aware delete. Wired Ctrl+T, Ctrl+D, and Delete shortcuts for selected tasks in App.tsx. 87/87 tests, tsc and vite build pass.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `30ddea3` | feat: add Microsoft To Do-style task context menu and keyboard shortcuts |
+| `d26105a` | docs(spec): document task context menu and keyboard shortcuts |
+
+### Status
+
+[OK] **Completed**
