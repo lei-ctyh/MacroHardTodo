@@ -246,5 +246,21 @@ pub fn attachment_reveal(app: AppHandle, rel_path: String) -> Result<(), String>
             .spawn()
             .map_err(|e| format!("无法打开资源管理器: {e}"))?;
     }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(&p)
+            .spawn()
+            .map_err(|e| format!("无法在访达中显示文件: {e}"))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let target = p.parent().unwrap_or(&p);
+        std::process::Command::new("xdg-open")
+            .arg(target)
+            .spawn()
+            .map_err(|e| format!("无法打开文件管理器: {e}"))?;
+    }
     Ok(())
 }

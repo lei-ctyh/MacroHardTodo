@@ -1,0 +1,141 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.label }})
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows x64
+            platform: windows-latest
+            args: "--bundles nsis"
+            rust_target: ""
+            portable: true
+          - label: macOS Apple Silicon (arm64)
+            platform: macos-latest
+            args: "--target aarch64-apple-darwin --bundles dmg"
+            rust_target: "aarch64-apple-darwin"
+            portable: false
+          - label: macOS Intel (x64)
+            platform: macos-latest
+            args: "--target x86_64-apple-darwin --bundles dmg"
+            rust_target: "x86_64-apple-darwin"
+            portable: false
+          - label: Linux x64
+            platform: ubuntu-22.04
+            args: "--bundles deb,appimage"
+            rust_target: ""
+            portable: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve release tag
+        id: meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Linux Tauri dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libsecret-1-dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - run: npm ci
+      - run: npm test
+
+      - name: Build and upload Tauri bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ steps.meta.outputs.tag }}
+          releaseName: "MacroHard Todo ${{ steps.meta.outputs.tag }}"
+          releaseBody: |
+            ## 安装包说明
+
+            - **Windows**：下载 `*_x64-setup.exe`（NSIS 中文安装向导，无需管理员权限）或 `*_windows_x64_portable.zip`（免安装压缩包）
+            - **macOS**：Apple Silicon（M1–M4）下载 `*_aarch64.dmg`，Intel 机型下载 `*_x64.dmg`
+            - **Linux**：下载 `*.AppImage`（通用）或 `*.deb`（Debian / Ubuntu）
+
+            > **安全提示**：开源项目暂未购买商业代码签名证书。Windows 首次运行若弹出 SmartScreen 拦截，请点击「更多信息」→「仍要运行」；macOS 若提示无法验证开发者，请在「系统设置 → 隐私与安全性」中点击「仍要打开」。所有产物均由 GitHub Actions 公开源码自动构建，可通过附件 `SHA256SUMS.txt` 校验完整性。
+
+            完整变更记录见 [CHANGELOG.md](https://github.com/lei-ctyh/MacroHardTodo/blob/master/CHANGELOG.md)。
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
+
+      - name: Package and upload Windows portable zip
+        if: matrix.portable
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ver = "${{ steps.meta.outputs.version }}"
+          $tag = "${{ steps.meta.outputs.tag }}"
+          $exe = "src-tauri/target/release/macrohard-todo.exe"
+          $zip = "MacroHard-Todo_${ver}_windows_x64_portable.zip"
+          Compress-Archive -Path $exe -DestinationPath $zip -Force
+          gh release upload $tag $zip --clobber
+
+  checksums:
+    name: Generate SHA256SUMS
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Download assets and upload SHA256SUMS.txt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p release-assets
+          gh release download "${{ steps.meta.outputs.tag }}" --dir release-assets --skip-existing
+          rm -f release-assets/SHA256SUMS.txt
+          (cd release-assets && sha256sum * > ../SHA256SUMS.txt)
+          cat SHA256SUMS.txt
+          gh release upload "${{ steps.meta.outputs.tag }}" SHA256SUMS.txt --clobber

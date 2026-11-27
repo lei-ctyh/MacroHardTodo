@@ -22,6 +22,7 @@ import {
   EditIcon,
   FolderIcon,
   InfoIcon,
+  LightbulbIcon,
   OpenIcon,
   RefreshIcon,
   SparklesIcon,
@@ -70,14 +71,17 @@ const SMART_LIST_SETTINGS: {
 const THEME_OPTIONS = [
   { value: "light", label: "浅色主题" },
   { value: "dark", label: "深色主题" },
-  { value: "system", label: "使用我的 Windows 主题" },
+  { value: "system", label: "跟随系统主题" },
 ] as const;
 
 const PURGE_DAY_PRESETS = [0, 7, 14, 30, 90, 180, 365] as const;
-const APP_VERSION = "0.1.0";
+const APP_VERSION =
+  typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "0.1.0";
 const REPO_URL = "https://github.com/lei-ctyh/MacroHardTodo";
 const RELEASES_URL = `${REPO_URL}/releases`;
-const ISSUES_URL = `${REPO_URL}/issues`;
+const CHANGELOG_URL = `${REPO_URL}/blob/master/CHANGELOG.md`;
+const BUG_REPORT_URL = `${REPO_URL}/issues/new?template=bug_report.yml`;
+const FEATURE_REQUEST_URL = `${REPO_URL}/issues/new?template=feature_request.yml`;
 
 export function SettingsPage() {
   const db = useStore((s) => s.db);
@@ -691,7 +695,7 @@ export function SettingsPage() {
                 <button
                   type="button"
                   className="btn small"
-                  onClick={() => void openExternal(RELEASES_URL)}
+                  onClick={() => void openExternal(CHANGELOG_URL)}
                 >
                   <SparklesIcon size={13} />
                   <span>更新日志</span>
@@ -699,10 +703,18 @@ export function SettingsPage() {
                 <button
                   type="button"
                   className="btn small"
-                  onClick={() => void openExternal(ISSUES_URL)}
+                  onClick={() => void openExternal(BUG_REPORT_URL)}
                 >
                   <InfoIcon size={13} />
                   <span>问题反馈</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn small"
+                  onClick={() => void openExternal(FEATURE_REQUEST_URL)}
+                >
+                  <LightbulbIcon size={13} />
+                  <span>功能建议</span>
                 </button>
                 <button
                   type="button"

@@ -1,0 +1,19 @@
+name: 功能建议
+description: 提出新功能想法或交互改进建议
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景 / 痛点
+      description: 描述你想解决的问题或当前不便的地方
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望的方案
+      description: 简述你希望的交互方式或效果，可附参考截图
+    validations:
+      required: true
