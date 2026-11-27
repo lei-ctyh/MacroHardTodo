@@ -22,6 +22,7 @@
   --accent: #2564cf;
   --accent-hover: #1b4fa0;
   --accent-soft: #e8f0fe;
+  --on-accent: #ffffff;
   --danger: #c42b1c;
   --star: #eaa300;
   --checkbox-border: #8a8886;
@@ -64,6 +65,7 @@
   --accent: #4f8cff;
   --accent-hover: #6ba1ff;
   --accent-soft: #26364f;
+  --on-accent: #1f1f1f;
   --danger: #ff6b5e;
   --star: #f0b429;
   --checkbox-border: #8a8886;
@@ -72,7 +74,7 @@
   --task-card-bg: #2b2b2b;
   --task-card-border: #3b3a39;
   --task-card-hover: #333333;
-  --task-card-selected: #26364f;
+  --task-card-selected: #3b3a39;
   --task-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   --recurring-overdue-bar: #d4b12a;
   --scrollbar-thumb: #5c5a58;
@@ -782,6 +784,17 @@ select {
 
 /* ---------------- 主区域 ---------------- */
 
+.main,
+.detail-panel {
+  --theme-accent: var(--theme-accent-light, var(--accent));
+  --theme-accent-hover: var(--theme-accent-hover-light, var(--accent-hover));
+}
+:root[data-theme="dark"] .main,
+:root[data-theme="dark"] .detail-panel {
+  --theme-accent: var(--theme-accent-dark, var(--accent));
+  --theme-accent-hover: var(--theme-accent-hover-dark, var(--accent-hover));
+}
+
 .main {
   flex: 1;
   min-width: 0;
@@ -978,6 +991,10 @@ select {
   background-repeat: no-repeat;
 }
 
+.main.on-color {
+  background: var(--theme-bg);
+}
+
 .main.on-image .main-header {
   padding-top: 36px;
 }
@@ -1018,6 +1035,15 @@ select {
 
 .main.on-image .section-title:hover {
   background: rgba(255, 255, 255, 0.92);
+}
+
+:root[data-theme="dark"] .main.on-photo .section-title {
+  color: var(--text);
+  background: rgba(38, 38, 38, 0.84);
+}
+
+:root[data-theme="dark"] .main.on-photo .section-title:hover {
+  background: rgba(52, 52, 52, 0.92);
 }
 
 .main.on-image.on-light .main-title {
@@ -1087,6 +1113,7 @@ select {
   backdrop-filter: none;
 }
 
+.main.on-image .quick-add .quick-add-trigger,
 .main.on-image .quick-add input {
   color: #202020;
 }
@@ -1101,6 +1128,103 @@ select {
 
 .main.on-image .quick-add .plus {
   color: var(--text-secondary);
+}
+
+:root[data-theme="dark"] .main.on-photo .quick-add {
+  background: rgba(38, 38, 38, 0.86);
+}
+
+:root[data-theme="dark"] .main.on-photo .quick-add:hover:not(.editing) {
+  background: rgba(52, 52, 52, 0.92);
+}
+
+:root[data-theme="dark"] .main.on-photo .quick-add .quick-add-trigger,
+:root[data-theme="dark"] .main.on-photo .quick-add input {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .main.on-photo .quick-add input::placeholder,
+:root[data-theme="dark"] .main.on-photo .quick-add .hint,
+:root[data-theme="dark"] .main.on-photo .quick-add .plus {
+  color: var(--text-secondary);
+}
+
+/* 暗色模式下纯色主题（对齐 Microsoft To Do）：背景保持深灰，主题色转为标题 / 空态 / 添加任务前景色 */
+:root[data-theme="dark"] .main.on-color {
+  background: var(--bg-main);
+}
+:root[data-theme="dark"] .main.on-color .main-title {
+  color: var(--theme-accent);
+  text-shadow: none;
+}
+:root[data-theme="dark"] .main.on-color .main-title .title-input {
+  border-bottom-color: var(--theme-accent);
+}
+:root[data-theme="dark"] .main.on-color .main-subtitle {
+  color: var(--theme-accent);
+  opacity: 0.85;
+  text-shadow: none;
+}
+:root[data-theme="dark"] .main.on-color .header-actions .icon-btn {
+  color: var(--text-secondary);
+}
+:root[data-theme="dark"] .main.on-color .header-actions .icon-btn:hover,
+:root[data-theme="dark"] .main.on-color .header-actions .icon-btn.active {
+  background: var(--hover);
+  color: var(--text);
+}
+:root[data-theme="dark"] .main.on-color .empty-state,
+:root[data-theme="dark"] .main.on-color .empty-state .big {
+  color: var(--theme-accent);
+  text-shadow: none;
+}
+:root[data-theme="dark"] .main.on-color .section-title {
+  background: var(--hover);
+  color: var(--text);
+}
+:root[data-theme="dark"] .main.on-color .section-title:hover {
+  background: var(--nav-hover);
+}
+:root[data-theme="dark"] .main.on-color .task-scroll {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+:root[data-theme="dark"] .main.on-color .task-scroll::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  background-clip: content-box;
+}
+:root[data-theme="dark"] .main.on-color .task-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: content-box;
+}
+:root[data-theme="dark"] .main.on-color .quick-add {
+  background: var(--bg-sidebar);
+  backdrop-filter: none;
+}
+:root[data-theme="dark"] .main.on-color .quick-add:hover:not(.editing) {
+  background: var(--quick-add-hover);
+}
+:root[data-theme="dark"] .main.on-color .quick-add .quick-add-trigger,
+:root[data-theme="dark"] .main.on-color .quick-add .plus {
+  color: var(--theme-accent);
+}
+:root[data-theme="dark"] .main.on-color .quick-add.editing,
+:root[data-theme="dark"] .main.on-color .quick-add.editing:hover {
+  background: var(--task-card-bg);
+}
+:root[data-theme="dark"] .main.on-color .quick-add.editing input {
+  color: var(--text);
+}
+:root[data-theme="dark"] .main.on-color .welcome-card {
+  background: var(--bg-sidebar);
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme="dark"] .main.on-color .welcome-text {
+  color: var(--text-secondary);
+}
+:root[data-theme="dark"] .main.on-color .welcome-btn {
+  background: var(--theme-accent);
+  color: var(--on-accent);
 }
 
 .main.on-image .quick-add.editing input {
@@ -1623,6 +1747,7 @@ select {
 .checkbox.checked {
   background: var(--theme-accent, var(--accent));
   border-color: var(--theme-accent, var(--accent));
+  color: var(--on-accent);
 }
 .checkbox.checked:hover {
   background: var(--theme-accent-hover, var(--accent-hover));
@@ -1784,6 +1909,10 @@ select {
   transform: rotate(-6deg);
   overflow: hidden;
 }
+:root[data-theme="dark"] .empty-paper {
+  background: #3b3a39;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.36);
+}
 .empty-paper-bar {
   height: 15px;
 }
@@ -1793,6 +1922,9 @@ select {
   border-radius: 2px;
   background: #dbe3ea;
   margin: 10px 0 0 12px;
+}
+:root[data-theme="dark"] .empty-paper-line {
+  background: #5c5a58;
 }
 .empty-paper-line.short {
   width: 22px;
@@ -1810,6 +1942,10 @@ select {
   justify-content: center;
   background: #fff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+}
+:root[data-theme="dark"] .empty-badge {
+  background: #2d2d2d;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 .empty-badge svg {
   width: 18px;
@@ -1954,10 +2090,29 @@ select {
   justify-content: center;
   color: #fff;
   flex: 0 0 auto;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.detail-checkbox:hover {
+  border-color: var(--theme-accent, var(--accent));
+}
+.detail-checkbox svg {
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.detail-checkbox:not(.checked):hover svg {
+  opacity: 0.45;
+  transform: scale(0.95);
+  color: var(--theme-accent, var(--accent));
 }
 .detail-checkbox.checked {
   background: var(--theme-accent, var(--accent));
   border-color: var(--theme-accent, var(--accent));
+}
+.detail-checkbox.checked svg {
+  opacity: 1;
+  transform: scale(1);
+  color: var(--on-accent);
 }
 
 .detail-title {
@@ -2269,7 +2424,7 @@ button.detail-row:hover {
   flex: 0 0 auto;
 }
 .detail-row .row-icon.accent {
-  color: var(--accent);
+  color: var(--theme-accent, var(--accent));
 }
 .detail-row .row-icon.danger {
   color: var(--danger);
@@ -2288,7 +2443,7 @@ button.detail-row:hover {
 }
 .detail-row .row-value.accent,
 .detail-row .row-value .row-main.accent {
-  color: var(--accent);
+  color: var(--theme-accent, var(--accent));
 }
 .detail-row .row-value.danger {
   color: var(--danger);
@@ -2609,9 +2764,24 @@ button.detail-row:hover {
 .step-check:hover {
   border-color: var(--theme-accent, var(--accent));
 }
+.step-check svg {
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.step-check:not(.checked):hover svg {
+  opacity: 0.45;
+  transform: scale(0.95);
+  color: var(--theme-accent, var(--accent));
+}
 .step-check.checked {
   background: var(--theme-accent, var(--accent));
   border-color: var(--theme-accent, var(--accent));
+}
+.step-check.checked svg {
+  opacity: 1;
+  transform: scale(1);
+  color: var(--on-accent);
 }
 .step-check-placeholder {
   pointer-events: none;

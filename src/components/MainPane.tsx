@@ -358,7 +358,7 @@ export function MainPane({
 
   const mainStyle = hasBanner
     ? theme?.color
-      ? { background: theme.color }
+      ? ({ "--theme-bg": theme.color } as CSSProperties)
       : bgUrl
         ? {
             backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.28), rgba(0,0,0,0) 150px), url("${bgUrl}")`,
@@ -369,8 +369,10 @@ export function MainPane({
   const accent = themeAccent(theme);
   const accentStyle = accent
     ? ({
-        "--theme-accent": accent.base,
-        "--theme-accent-hover": accent.hover,
+        "--theme-accent-light": accent.base,
+        "--theme-accent-hover-light": accent.hover,
+        "--theme-accent-dark": accent.darkBase,
+        "--theme-accent-hover-dark": accent.darkHover,
       } as CSSProperties)
     : undefined;
   const paneStyle =
@@ -383,7 +385,7 @@ export function MainPane({
     <main
       className={`main ${hasBanner ? "on-image" : ""} ${
         themePhoto ? "on-photo" : ""
-      } ${themeLight ? "on-light" : ""}`}
+      } ${theme?.color ? "on-color" : ""} ${themeLight ? "on-light" : ""}`}
       style={paneStyle}
     >
       <div className="main-header">

@@ -136,11 +136,13 @@ export function TaskRow({
     });
   }
   if (hasNotes) {
+    const notesOnly = meta.length === 0;
     meta.push({
       key: "notes",
       node: (
         <span className="meta" title="包含备注">
           <NoteIcon strokeWidth={1.6} />
+          {notesOnly ? "备注" : null}
         </span>
       ),
     });

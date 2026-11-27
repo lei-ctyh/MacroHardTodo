@@ -204,8 +204,10 @@ export function TaskDetail() {
   const accent = themeAccent(viewTheme);
   const accentStyle = accent
     ? ({
-        "--theme-accent": accent.base,
-        "--theme-accent-hover": accent.hover,
+        "--theme-accent-light": accent.base,
+        "--theme-accent-hover-light": accent.hover,
+        "--theme-accent-dark": accent.darkBase,
+        "--theme-accent-hover-dark": accent.darkHover,
       } as CSSProperties)
     : undefined;
 
