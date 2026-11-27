@@ -29,8 +29,8 @@ type DB = {
 | Lists, tasks, steps, attachments | `db.lists` / `db.tasks` | Yes (entity LWW merge) |
 | List groups | `db.groups`, referenced by `TaskList.groupId` | Yes (entity LWW merge + tombstones) |
 | Cross-device preferences (view themes for My Day and other smart views) | `db.shared[key]` | Yes (per-key LWW) |
-| Device/UI preferences (theme mode, purge days, WebDAV config, per-view sort, collapsed groups, sidebar width, avatar) | `db.settings` | No |
-| Transient UI (search open, suggestion panel, editors, dialogs) | component `useState` | No |
+| Device/UI preferences (theme mode, purge days, WebDAV config, per-view sort, collapsed groups/sections, sidebar width, avatar, task ordering/sound/confirm/week-start/smart-list preferences) | `db.settings` | No |
+| Transient UI (search open, suggestion panel, editors, dialogs, full-window `settingsOpen`, delete `confirm`) | component `useState` / store UI fields | No |
 | Current view / selected task / query | store (`view`, `selectedTaskId`, `query`) | No |
 
 ---

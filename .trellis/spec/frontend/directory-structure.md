@@ -24,7 +24,10 @@ MacroHardTodo/
 │   │   ├── RepeatDialog.tsx  narrow modal custom recurrence editor with portaled popovers
 │   │   ├── QuickAdd.tsx      fixed bottom add bar
 │   │   ├── SuggestionPanel.tsx
-│   │   ├── SettingsDialog.tsx / SyncDialog.tsx / MigrationWizard.tsx
+│   │   ├── SettingsPage.tsx  full-window settings page (general, theme, smart lists, sync, data, about)
+│   │   ├── ConfirmDialog.tsx narrow confirmation modal driven by confirmBeforeDelete
+│   │   ├── useAvatar.ts      shared avatar loading/picking hook for Sidebar and SettingsPage
+│   │   ├── SyncDialog.tsx / MigrationWizard.tsx
 │   │   ├── Modal.tsx         shared dialog shell (supports wide / narrow)
 │   │   └── icons.tsx         central lucide re-exports (never import lucide elsewhere)
 │   ├── lib/                  pure TypeScript domain logic (no React imports)
@@ -34,6 +37,7 @@ MacroHardTodo/
 │   │   ├── views.ts          smart views, per-view sorting, counts, suggestion groups, sidebar sections, view-level task grouping
 │   │   ├── dates.ts          date formatting helpers (dueLabel, dayLabel, reminderLabel)
 │   │   ├── emoji.ts          leading-emoji grapheme splitting for custom list names
+│   │   ├── sound.ts          Web Audio API completion chime (no external audio assets)
 │   │   ├── themes.ts         preset backgrounds, theme image resolution
 │   │   ├── graphImport.ts    Microsoft Graph mapping + idempotent import
 │   │   ├── syncClient.ts     WebDAV sync orchestration (merge + upload)
