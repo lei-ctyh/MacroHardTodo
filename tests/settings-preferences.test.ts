@@ -11,6 +11,7 @@ import {
   DEFAULT_SETTINGS,
   createDB,
   createTask,
+  profileDisplay,
   type DB,
 } from "../src/lib/model";
 import { todayISO } from "../src/lib/dates";
@@ -259,5 +260,38 @@ describe("showDueTodayInMyDay", () => {
     ).toEqual([]);
     expect(smartCounts(offDb).myday).toBe(1);
     expect(myDaySuggestions(offDb).map((t) => t.title)).toEqual(["今天截止"]);
+  });
+});
+
+describe("profileDisplay", () => {
+  it("昵称与副标题按 自定义 -> WebDAV 账号 -> 默认/空 逐级回退", () => {
+    expect(profileDisplay({})).toEqual({
+      name: "MacroHard Todo",
+      subtitle: undefined,
+    });
+    expect(profileDisplay({ webdavUser: "alice@example.com" })).toEqual({
+      name: "MacroHard Todo",
+      subtitle: "alice@example.com",
+    });
+    expect(
+      profileDisplay({
+        profileName: " 张磊 ",
+        profileSubtitle: "专注当下",
+        webdavUser: "alice@example.com",
+      }),
+    ).toEqual({
+      name: "张磊",
+      subtitle: "专注当下",
+    });
+    expect(
+      profileDisplay({
+        profileName: "   ",
+        profileSubtitle: "   ",
+        webdavUser: "alice@example.com",
+      }),
+    ).toEqual({
+      name: "MacroHard Todo",
+      subtitle: "alice@example.com",
+    });
   });
 });

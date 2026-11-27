@@ -150,6 +150,18 @@ export default function App() {
     return () => unlisten?.();
   }, []);
 
+  // 禁用浏览器原生右键菜单（保留输入框与已选文本的复制/粘贴体验）
+  useEffect(() => {
+    const onContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('input, textarea, [contenteditable="true"]')) return;
+      if (window.getSelection()?.toString().trim()) return;
+      e.preventDefault();
+    };
+    window.addEventListener("contextmenu", onContextMenu);
+    return () => window.removeEventListener("contextmenu", onContextMenu);
+  }, []);
+
   // 应用内快捷键
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -159,7 +171,13 @@ export default function App() {
       }
       if (e.key === "Escape") {
         const st = useStore.getState();
-        if (st.dialog || st.confirm) return;
+        if (
+          st.dialog ||
+          st.confirm ||
+          document.querySelector('[role="dialog"][aria-modal="true"]')
+        ) {
+          return;
+        }
         if (sidebarOpen) {
           setSidebarOpen(false);
           return;

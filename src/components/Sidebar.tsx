@@ -20,6 +20,7 @@ import {
   DEFAULT_LIST_ID,
   activeGroups,
   activeLists,
+  profileDisplay,
   type TaskGroup,
   type TaskList,
 } from "../lib/model";
@@ -100,6 +101,7 @@ export function Sidebar() {
   const toggleGroupCollapsed = useStore((s) => s.toggleGroupCollapsed);
   const reorganizeLists = useStore((s) => s.reorganizeLists);
   const { avatarUrl, pickAvatar: pickAvatarFile } = useAvatar();
+  const profile = profileDisplay(db.settings);
 
   const allLists = useMemo(() => activeLists(db), [db]);
   const lists = useMemo(
@@ -319,15 +321,19 @@ export function Sidebar() {
             )}
           </button>
           <div className="brand-text">
-            <div className="brand-name">本地用户</div>
-            <div className="brand-sub">本地数据</div>
+            <div className="brand-name">{profile.name}</div>
+            {profile.subtitle ? (
+              <div className="brand-sub">{profile.subtitle}</div>
+            ) : null}
           </div>
         </div>
         {accountOpen ? (
           <div className="menu account-menu" role="menu">
             <div className="account-head">
-              <div className="account-title">本地用户</div>
-              <div className="account-sub">本地数据</div>
+              <div className="account-title">{profile.name}</div>
+              {profile.subtitle ? (
+                <div className="account-sub">{profile.subtitle}</div>
+              ) : null}
             </div>
             <div className="sep" />
             <button

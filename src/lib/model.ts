@@ -145,6 +145,10 @@ export interface Settings {
   sidebarWidth?: number;
   /** 本地头像；仅本地保存 */
   avatar?: ThemeImage;
+  /** 本地自定义显示名称；未填时回退为 MacroHard Todo */
+  profileName?: string;
+  /** 本地自定义副标题/签名；未填时回退为 WebDAV 用户名 */
+  profileSubtitle?: string;
   /** 在列表顶部添加新任务 */
   addTasksOnTop: boolean;
   /** 将标星任务移至列表顶部 */
@@ -433,6 +437,17 @@ export function taskById(db: DB, id: string | null): Task | undefined {
 export function listById(db: DB, id: string | null): TaskList | undefined {
   if (!id) return undefined;
   return db.lists.find((l) => l.id === id);
+}
+
+export function profileDisplay(
+  settings: Pick<Settings, "profileName" | "profileSubtitle" | "webdavUser">,
+): { name: string; subtitle?: string } {
+  const name = settings.profileName?.trim() || "MacroHard Todo";
+  const subtitle =
+    settings.profileSubtitle?.trim() ||
+    settings.webdavUser?.trim() ||
+    undefined;
+  return { name, subtitle };
 }
 
 export function completeRatio(task: Task): number {

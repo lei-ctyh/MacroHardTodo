@@ -3,9 +3,10 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api } from "../lib/api";
-import type { ToggleableSmartViewId } from "../lib/model";
+import { profileDisplay, type ToggleableSmartViewId } from "../lib/model";
 import { useStore } from "../store/useStore";
 import { useAvatar } from "./useAvatar";
+import { Modal } from "./Modal";
 import { ToggleSwitch } from "./ToggleSwitch";
 import {
   AllIcon,
@@ -18,6 +19,7 @@ import {
   CompletedIcon,
   CopyIcon,
   DownloadIcon,
+  EditIcon,
   FolderIcon,
   InfoIcon,
   OpenIcon,
@@ -100,6 +102,9 @@ export function SettingsPage() {
   const [copiedPath, setCopiedPath] = useState(false);
   const [copiedAbout, setCopiedAbout] = useState(false);
   const [starBannerVisible, setStarBannerVisible] = useState(true);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [subtitleDraft, setSubtitleDraft] = useState("");
   const [message, setMessage] = useState<
     { kind: "ok" | "err" | "info"; text: string } | null
   >(null);
@@ -130,6 +135,21 @@ export function SettingsPage() {
   }, []);
 
   const settings = db.settings;
+  const profile = profileDisplay(settings);
+
+  const startEditProfile = () => {
+    setNameDraft(settings.profileName ?? "");
+    setSubtitleDraft(settings.profileSubtitle ?? "");
+    setEditingProfile(true);
+  };
+
+  const saveProfile = () => {
+    updateSettings({
+      profileName: nameDraft.trim() || undefined,
+      profileSubtitle: subtitleDraft.trim() || undefined,
+    });
+    setEditingProfile(false);
+  };
 
   const toggleAutostart = async (next: boolean) => {
     try {
@@ -309,28 +329,19 @@ export function SettingsPage() {
               <img src={avatarUrl ?? "/logo.png"} alt="" />
             </button>
             <div className="settings-profile-info">
-              <div className="settings-profile-name">本地用户</div>
-              <div className="settings-profile-sub">
-                {settings.webdavUser ? `WebDAV · ${settings.webdavUser}` : "本地数据"}
-              </div>
+              <div className="settings-profile-name">{profile.name}</div>
+              {profile.subtitle ? (
+                <div className="settings-profile-sub">{profile.subtitle}</div>
+              ) : null}
             </div>
             <div className="settings-profile-actions">
               <button
                 type="button"
                 className="btn small"
-                onClick={() => void pickAvatar()}
+                onClick={startEditProfile}
               >
-                更换头像
+                编辑资料
               </button>
-              {hasCustomAvatar ? (
-                <button
-                  type="button"
-                  className="btn small ghost"
-                  onClick={clearAvatar}
-                >
-                  恢复默认
-                </button>
-              ) : null}
             </div>
           </section>
 
@@ -731,6 +742,91 @@ export function SettingsPage() {
           </section>
         </div>
       </div>
+
+      {editingProfile ? (
+        <Modal
+          title="编辑资料"
+          narrow
+          onClose={() => setEditingProfile(false)}
+          footer={
+            <>
+              <span className="spacer" />
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setEditingProfile(false)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="btn primary"
+                onClick={saveProfile}
+              >
+                保存
+              </button>
+            </>
+          }
+        >
+          <div className="profile-modal-avatar-box">
+            <button
+              type="button"
+              className={`profile-modal-avatar ${avatarUrl ? "has-photo" : "has-logo"}`}
+              onClick={() => void pickAvatar()}
+              title="更换头像"
+              aria-label="更换头像"
+            >
+              <img src={avatarUrl ?? "/logo.png"} alt="" />
+              <span className="profile-modal-avatar-badge" aria-hidden>
+                <EditIcon size={12} strokeWidth={2} />
+              </span>
+            </button>
+            {hasCustomAvatar ? (
+              <button
+                type="button"
+                className="profile-modal-reset"
+                onClick={clearAvatar}
+              >
+                恢复默认头像
+              </button>
+            ) : null}
+          </div>
+          <div
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                saveProfile();
+              }
+            }}
+          >
+            <div className="form-row">
+              <label htmlFor="profile-name-input">昵称</label>
+              <input
+                id="profile-name-input"
+                type="text"
+                autoFocus
+                value={nameDraft}
+                placeholder="MacroHard Todo"
+                onChange={(e) => setNameDraft(e.target.value)}
+              />
+            </div>
+            <div className="form-row">
+              <label htmlFor="profile-subtitle-input">副标题</label>
+              <input
+                id="profile-subtitle-input"
+                type="text"
+                value={subtitleDraft}
+                placeholder={
+                  settings.webdavUser
+                    ? `默认显示 ${settings.webdavUser}`
+                    : "留空则不显示"
+                }
+                onChange={(e) => setSubtitleDraft(e.target.value)}
+              />
+            </div>
+          </div>
+        </Modal>
+      ) : null}
     </div>
   );
 }
