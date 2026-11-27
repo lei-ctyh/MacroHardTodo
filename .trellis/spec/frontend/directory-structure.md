@@ -24,7 +24,8 @@ MacroHardTodo/
 │   │   ├── RepeatDialog.tsx  narrow modal custom recurrence editor with portaled popovers
 │   │   ├── QuickAdd.tsx      fixed bottom add bar
 │   │   ├── SuggestionPanel.tsx
-│   │   ├── SettingsPage.tsx  full-window settings page (general, theme, smart lists, sync, data, about)
+│   │   ├── SettingsPage.tsx  full-window settings page (general, theme, smart lists, sync & data, about)
+│   │   ├── ToggleSwitch.tsx  shared Fluent pill switch (SettingsPage, SyncDialog)
 │   │   ├── ConfirmDialog.tsx narrow confirmation modal driven by confirmBeforeDelete
 │   │   ├── useAvatar.ts      shared avatar loading/picking hook for Sidebar and SettingsPage
 │   │   ├── SyncDialog.tsx / MigrationWizard.tsx
