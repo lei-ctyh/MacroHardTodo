@@ -268,3 +268,38 @@ Removed count badge from SuggestionPanel header, aligned suggestion row step/dat
 ### Status
 
 [OK] **Completed**
+
+
+## Session 11: Dark mode theme adaptation and 14 CC0 photographic wallpapers
+<!-- trellis-session: v=2 fp=69e7919b82da9516 -->
+
+**Date**: 2026-11-27
+**Task**: Dark mode theme adaptation and 14 CC0 photographic wallpapers
+**Branch**: `master`
+
+### Summary
+
+Adapted dark mode for photo themes (dark frosted pills/QuickAdd, neutral slate #94a1ac accent, dark --on-accent checkmarks, neutral selected row) and pure color themes (Microsoft To Do dark canvas + accent foreground); fixed ghost checkmarks in TaskDetail; added notes-only label; upgraded 8 SVG presets to 14 curated CC0 photographic wallpapers.
+
+### Main Changes
+
+- Dark mode photo themes: dark frosted section pills and QuickAdd on .main.on-photo, neutral slate #94a1ac accent with --on-accent #1f1f1f checkmarks, neutral #3b3a39 selected card, and theme-accent TaskDetail rows
+- Dark mode color themes (.main.on-color): keep calm #1f1f1f canvas and render color theme as foreground accent on title, subtitle, empty state, QuickAdd trigger, and welcome controls; dark empty-paper illustration
+- TaskDetail & TaskRow: fixed unchecked ghost checkmarks on .detail-checkbox/.step-check in dark mode; rendered 备注 label when notes is the only TaskRow metadata item
+- Wallpapers: replaced 8 SVG backgrounds with 14 visually verified 1600x960 CC0 photographs (2.81 MB total, keeping all 8 original preset IDs plus 6 new scenic themes)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `037a82a` | feat: adapt dark mode themes and upgrade to 14 CC0 photographic wallpapers |
+| `b05e4d2` | docs(spec): document dark-mode color themes, slate photo accent, and notes label |
+| `00a9c42` | chore(task): archive 11-27-dark-mode-and-wallpapers |
+
+### Testing
+
+- [OK] tsc --noEmit (0 errors), vitest run (11 files / 87 tests passed), npm run build (succeeded)
+
+### Status
+
+[OK] **Completed**
