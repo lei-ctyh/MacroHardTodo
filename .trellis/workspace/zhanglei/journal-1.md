@@ -76,3 +76,27 @@ Rebuilt TaskDetail into card sections with theme-accented reminder/due/repeat ro
 ### Status
 
 [OK] **Completed**
+
+
+## Session 4: Settings page redesign: full-window layout, preferences, Fluent polish
+<!-- trellis-session: v=2 fp=8a8d1fa5ce40a6f3 -->
+
+**Date**: 2026-11-27
+**Task**: Settings page redesign: full-window layout, preferences, Fluent polish
+**Branch**: `master`
+
+### Summary
+
+Replaced SettingsDialog with a full-window Microsoft To Do-style SettingsPage (sticky back bar, profile header with shared useAvatar hook, Fluent pill switches, vertical theme radios, borderless Fluent action rows for Sync & Data, grouped About card with theme-colored Star banner). Added local preferences: addTasksOnTop, moveStarredToTop, playCompletionSound (Web Audio chime), confirmBeforeDelete (ConfirmDialog), weekStartsOn (DateTimePicker), smartListVisibility, autoHideEmptySmartLists, showDueTodayInMyDay; fixed stuck dataDir loading state. Updated frontend specs and added 7 unit tests (84/84 pass, tsc and build green).
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `27087cf` | feat: redesign settings as a full-window page with general and smart-list preferences |
+| `d44fee1` | docs(spec): document full-window settings page and preferences |
+| `fd25886` | style(settings): unify sync and data section as borderless Fluent action rows |
+
+### Status
+
+[OK] **Completed**
