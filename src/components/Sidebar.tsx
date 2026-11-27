@@ -422,7 +422,9 @@ export function Sidebar() {
                 <Icon size={16} strokeWidth={1.5} />
               </span>
               <span className="nav-label">{label}</span>
-              {count > 0 ? <span className="nav-count">{count}</span> : null}
+              {id !== "completed" && count > 0 ? (
+                <span className="nav-count">{count}</span>
+              ) : null}
             </div>
           );
         })}

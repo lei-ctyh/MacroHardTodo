@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { open } from "@tauri-apps/plugin-dialog";
 import { api } from "../lib/api";
 import { useStore } from "../store/useStore";
 import {
-  activeLists,
   type RecurrenceRule,
   type Task,
 } from "../lib/model";
@@ -32,10 +32,12 @@ import {
   CheckIcon,
   CheckSmallIcon,
   ChevronsRightIcon,
+  CircleIcon,
   ClockIcon,
   CloseIcon,
-  CopyIcon,
+  CompletedIcon,
   ArrowRightIcon,
+  MoreVerticalIcon,
   PlusIcon,
   RepeatIcon,
   SparklesIcon,
@@ -104,7 +106,7 @@ export function TaskDetail() {
   const toggleComplete = useStore((s) => s.toggleComplete);
   const deleteTask = useStore((s) => s.deleteTask);
   const confirmDelete = useStore((s) => s.confirmDelete);
-  const duplicateTask = useStore((s) => s.duplicateTask);
+  const addTask = useStore((s) => s.addTask);
   const toggleImportance = useStore((s) => s.toggleImportance);
   const setMyDay = useStore((s) => s.setMyDay);
   const addStep = useStore((s) => s.addStep);
@@ -114,7 +116,6 @@ export function TaskDetail() {
   const addAttachment = useStore((s) => s.addAttachment);
   const removeAttachment = useStore((s) => s.removeAttachment);
   const ensureAttachment = useStore((s) => s.ensureAttachment);
-  const moveTask = useStore((s) => s.moveTask);
 
   const task = db.tasks.find((t) => t.id === selectedId && !t.deletedAt);
 
@@ -122,17 +123,51 @@ export function TaskDetail() {
   const [picker, setPicker] = useState<"due" | "reminder" | null>(null);
   const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
   const [stepTitle, setStepTitle] = useState("");
+  const [stepInputFocused, setStepInputFocused] = useState(false);
+  const [stepMenu, setStepMenu] = useState<{
+    stepId: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const [tagInput, setTagInput] = useState("");
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const stepInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const stepMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMenu(null);
     setPicker(null);
     setRepeatDialogOpen(false);
     setStepTitle("");
+    setStepInputFocused(false);
+    setStepMenu(null);
     setTagInput("");
   }, [selectedId]);
+
+  useEffect(() => {
+    if (!stepMenu) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (
+        stepMenuRef.current &&
+        !stepMenuRef.current.contains(event.target as Node)
+      ) {
+        setStepMenu(null);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        setStepMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [stepMenu]);
 
   useEffect(() => {
     if (!menu) return;
@@ -176,7 +211,6 @@ export function TaskDetail() {
 
   const steps = task.steps.filter((s) => !s.deletedAt).sort((a, b) => a.order - b.order);
   const attachments = (task.attachments ?? []).filter((a) => !a.deletedAt);
-  const lists = activeLists(db);
   const today = todayISO();
   const manuallyInMyDay = task.myDay === today;
   const autoInMyDay =
@@ -184,6 +218,10 @@ export function TaskDetail() {
     (db.settings.showDueTodayInMyDay ?? true) &&
     task.dueDate === today;
   const inMyDay = manuallyInMyDay || autoInMyDay;
+  const reminderUpcoming = Boolean(
+    task.reminderAt && task.reminderAt > Date.now(),
+  );
+  const stepEditing = stepInputFocused || stepTitle.length > 0;
 
   const setRecurrence = (rule: RecurrenceRule | undefined) => {
     updateTask(task.id, {
@@ -269,6 +307,17 @@ export function TaskDetail() {
   return (
     <>
     <section className="detail-panel" style={accentStyle}>
+      <div className="detail-topbar">
+        <button
+          type="button"
+          className="icon-btn detail-close-btn"
+          onClick={() => selectTask(null)}
+          title="关闭"
+          aria-label="关闭"
+        >
+          <CloseIcon size={16} strokeWidth={1.5} />
+        </button>
+      </div>
       <div className="detail-scroll">
         <div className="detail-card detail-title-card">
           <div className="detail-title-row">
@@ -318,63 +367,104 @@ export function TaskDetail() {
                 >
                   <CheckSmallIcon />
                 </button>
-                <input
-                  className={`step-input ${step.completed ? "done" : ""}`}
-                  value={step.title}
-                  onChange={(e) =>
-                    updateStep(task.id, step.id, { title: e.target.value })
-                  }
-                />
-                <button
-                  className="step-del"
-                  onClick={() => deleteStep(task.id, step.id)}
-                  aria-label="删除步骤"
-                >
-                  <CloseIcon />
-                </button>
+                <div className="step-body">
+                  <input
+                    className={`step-input ${step.completed ? "done" : ""}`}
+                    value={step.title}
+                    onChange={(e) =>
+                      updateStep(task.id, step.id, { title: e.target.value })
+                    }
+                  />
+                  <button
+                    type="button"
+                    className="step-more"
+                    aria-label="步骤操作"
+                    aria-haspopup="menu"
+                    aria-expanded={stepMenu?.stepId === step.id}
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setStepMenu(
+                        stepMenu?.stepId === step.id
+                          ? null
+                          : {
+                              stepId: step.id,
+                              x: Math.max(8, Math.min(rect.right - 204, window.innerWidth - 212)),
+                              y: Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - 156)),
+                            },
+                      );
+                    }}
+                  >
+                    <MoreVerticalIcon size={15} strokeWidth={1.6} />
+                  </button>
+                </div>
               </div>
             ))}
-            <div className="add-step-row">
-              <PlusIcon />
-              <input
-                value={stepTitle}
-                placeholder="添加步骤"
-                onChange={(e) => setStepTitle(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    addStep(task.id, stepTitle);
-                    setStepTitle("");
-                  }
-                }}
-              />
-            </div>
+            {(() => {
+              const addStepLabel = steps.length === 0 ? "添加步骤" : "下一步";
+              return (
+                <div
+                  className={`add-step-row ${stepEditing ? "editing" : ""}`}
+                  onClick={() => stepInputRef.current?.focus()}
+                >
+                  {stepEditing ? (
+                    <span className="step-check step-check-placeholder" aria-hidden />
+                  ) : (
+                    <PlusIcon size={16} strokeWidth={1.6} />
+                  )}
+                  <input
+                    ref={stepInputRef}
+                    value={stepTitle}
+                    placeholder={stepInputFocused ? "" : addStepLabel}
+                    title={addStepLabel}
+                    aria-label={addStepLabel}
+                    onFocus={() => setStepInputFocused(true)}
+                    onBlur={() => setStepInputFocused(false)}
+                    onChange={(e) => setStepTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addStep(task.id, stepTitle);
+                        setStepTitle("");
+                      } else if (e.key === "Escape") {
+                        e.stopPropagation();
+                        setStepTitle("");
+                        e.currentTarget.blur();
+                      }
+                    }}
+                  />
+                </div>
+              );
+            })()}
           </div>
         </div>
 
         <div className="detail-block">
           <button
             className="detail-row"
-            onClick={() =>
-              setMyDay(task.id, manuallyInMyDay ? null : today)
-            }
+            onClick={() => {
+              if (!manuallyInMyDay) setMyDay(task.id, today);
+              else setMyDay(task.id, null);
+            }}
           >
-            <span
-              className="row-icon"
-              style={
-                inMyDay
-                  ? { color: "var(--theme-accent, var(--accent))" }
-                  : undefined
-              }
-            >
+            <span className={`row-icon ${inMyDay ? "accent" : ""}`}>
               <SunIcon />
             </span>
-            <span className="row-value">
-              {manuallyInMyDay
-                ? "从我的一天移除"
-                : autoInMyDay
-                  ? "已在“我的一天”（今天截止）"
-                  : "添加到“我的一天”"}
+            <span className={`row-value ${inMyDay ? "accent" : "muted"}`}>
+              {inMyDay ? "已添加到“我的一天”" : "添加到“我的一天”"}
             </span>
+            {manuallyInMyDay ? (
+              <span
+                className="clear-btn"
+                role="button"
+                aria-label="从我的一天移除"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMyDay(task.id, null);
+                }}
+              >
+                <CloseIcon />
+              </span>
+            ) : null}
           </button>
         </div>
 
@@ -386,13 +476,21 @@ export function TaskDetail() {
                 setMenu(menu === "reminder" ? null : "reminder");
               }}
             >
-              <span className={`row-icon ${task.reminderAt ? "accent" : ""}`}>
+              <span
+                className={`row-icon ${
+                  task.reminderAt ? (reminderUpcoming ? "accent" : "past") : ""
+                }`}
+              >
                 <BellIcon />
               </span>
               <span className={`row-value ${task.reminderAt ? "stacked" : "muted"}`}>
                 {task.reminderAt ? (
                   <>
-                    <span className="row-main accent">
+                    <span
+                      className={`row-main ${
+                        reminderUpcoming ? "accent" : "past"
+                      }`}
+                    >
                       在 {clockLabel(task.reminderAt)} 时提醒我
                     </span>
                     <span className="row-sub">
@@ -779,33 +877,15 @@ export function TaskDetail() {
       </div>
 
       <div className="detail-footer">
-        <span>创建于 {createdAtLabel(task.createdAt)}</span>
-        {task.completedAt ? (
-          <span>· 完成于 {createdAtLabel(task.completedAt)}</span>
-        ) : null}
-        <span className="spacer" />
-        <select
-          className="detail-list-select"
-          value={task.listId}
-          onChange={(e) => moveTask(task.id, e.target.value)}
-          title="移动到列表"
-        >
-          {lists.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.name}
-            </option>
-          ))}
-        </select>
+        <span className="detail-footer-spacer" aria-hidden />
+        <span className="detail-footer-meta">
+          {task.completedAt
+            ? `已完成于 ${createdAtLabel(task.completedAt)}`
+            : `创建于 ${createdAtLabel(task.createdAt)}`}
+        </span>
         <button
-          className="icon-btn"
-          onClick={() => duplicateTask(task.id)}
-          title="创建副本"
-          aria-label="创建副本"
-        >
-          <CopyIcon />
-        </button>
-        <button
-          className="icon-btn"
+          type="button"
+          className="icon-btn detail-delete-btn"
           onClick={() =>
             confirmDelete({
               title: "删除任务",
@@ -818,18 +898,70 @@ export function TaskDetail() {
           title="删除任务"
           aria-label="删除任务"
         >
-          <TrashIcon />
-        </button>
-        <button
-          className="icon-btn"
-          onClick={() => selectTask(null)}
-          title="关闭"
-          aria-label="关闭"
-        >
-          <CloseIcon />
+          <TrashIcon size={16} strokeWidth={1.5} />
         </button>
       </div>
     </section>
+    {(() => {
+      if (!stepMenu) return null;
+      const targetStep = steps.find((s) => s.id === stepMenu.stepId);
+      if (!targetStep) return null;
+      return createPortal(
+        <div
+          ref={stepMenuRef}
+          className="menu step-menu"
+          role="menu"
+          aria-label="步骤操作"
+          style={{ position: "fixed", left: stepMenu.x, top: stepMenu.y }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+        >
+          <button
+            role="menuitem"
+            onClick={() => {
+              toggleStep(task.id, targetStep.id);
+              setStepMenu(null);
+            }}
+          >
+            {targetStep.completed ? (
+              <CircleIcon size={18} strokeWidth={1.4} />
+            ) : (
+              <CompletedIcon size={18} strokeWidth={1.4} />
+            )}
+            <span>{targetStep.completed ? "标记为未完成" : "标记为已完成"}</span>
+          </button>
+          <button
+            role="menuitem"
+            onClick={() => {
+              const title = targetStep.title.trim();
+              if (title) {
+                addTask({ listId: task.listId, title });
+                deleteStep(task.id, targetStep.id);
+              }
+              setStepMenu(null);
+            }}
+          >
+            <PlusIcon size={18} strokeWidth={1.4} />
+            <span>提升为任务</span>
+          </button>
+          <div className="sep" />
+          <button
+            role="menuitem"
+            className="danger"
+            onClick={() => {
+              deleteStep(task.id, targetStep.id);
+              setStepMenu(null);
+            }}
+          >
+            <TrashIcon size={18} strokeWidth={1.4} />
+            <span>删除步骤</span>
+          </button>
+        </div>,
+        document.body,
+      );
+    })()}
     {repeatDialogOpen ? (
       <RepeatDialog
         rule={task.recurrence}

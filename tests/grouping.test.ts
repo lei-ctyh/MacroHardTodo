@@ -119,11 +119,18 @@ describe("sectionsForView: 计划内", () => {
   const today = todayISO();
   const tomorrow = addDaysISO(today, 1);
 
-  it("按日期桶分组，已完成任务留在组内并一起计数", () => {
+  it("按日期桶分组，只包含未完成任务（不把历史已完成任务算入已逾期）", () => {
     const db: DB = {
       ...createDB("dev"),
       tasks: [
         task({ listId: DEFAULT_LIST_ID, title: "逾期", dueDate: addDaysISO(today, -1) }),
+        task({
+          listId: DEFAULT_LIST_ID,
+          title: "历史已完成",
+          dueDate: addDaysISO(today, -5),
+          completed: true,
+          completedAt: 1,
+        }),
         task({ listId: DEFAULT_LIST_ID, title: "今天", dueDate: today, order: 0 }),
         task({
           listId: DEFAULT_LIST_ID,
@@ -131,7 +138,7 @@ describe("sectionsForView: 计划内", () => {
           dueDate: today,
           order: 1,
           completed: true,
-          completedAt: 1,
+          completedAt: 2,
         }),
         task({
           listId: DEFAULT_LIST_ID,
@@ -157,9 +164,11 @@ describe("sectionsForView: 计划内", () => {
       "next5",
       "later",
     ]);
+    expect(sections.find((s) => s.key === "overdue")!.tasks.map((t) => t.title)).toEqual([
+      "逾期",
+    ]);
     expect(sections.find((s) => s.key === "today")!.tasks.map((t) => t.title)).toEqual([
       "今天",
-      "今天已完成",
     ]);
     expect(sections.find((s) => s.key === "next5")!.tasks.map((t) => t.title)).toEqual([
       "第2天",

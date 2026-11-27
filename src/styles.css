@@ -531,12 +531,19 @@ select {
 .group-name-input {
   flex: 1;
   min-width: 0;
+  height: 28px;
   font-size: 14px;
   font-weight: 400;
-  padding: 3px 4px;
-  border: 1px solid var(--accent);
+  padding: 0 8px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-bottom: 2px solid var(--accent);
   border-radius: 4px;
   background: var(--bg-input);
+  outline: none;
+}
+.group-name-input:focus-visible {
+  outline: none;
 }
 
 /* 右键菜单挂到 body 上：避免侧栏/群组/任务容器上的 transform 改变 fixed 定位基准 */
@@ -649,11 +656,18 @@ select {
 .nav-rename-input {
   flex: 1;
   min-width: 0;
+  height: 28px;
   font-size: 14px;
-  padding: 3px 4px;
-  border: 1px solid var(--accent);
+  padding: 0 8px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-bottom: 2px solid var(--accent);
   border-radius: 4px;
   background: var(--bg-input);
+  outline: none;
+}
+.nav-rename-input:focus-visible {
+  outline: none;
 }
 
 .menu-hint {
@@ -812,6 +826,9 @@ select {
   padding: 0 0 1px;
   outline: none;
   vertical-align: bottom;
+}
+.main-title .title-input:focus-visible {
+  outline: none;
 }
 
 .main-title.renaming .title-input {
@@ -1455,6 +1472,7 @@ select {
 }
 .quick-add input:focus-visible,
 .step-input:focus-visible,
+.add-step-row input:focus-visible,
 .detail-title:focus-visible,
 .search-box input:focus-visible,
 .notes-area:focus-visible,
@@ -1462,8 +1480,7 @@ select {
   outline: none;
 }
 .step-input:focus {
-  background: var(--hover);
-  border-radius: 4px;
+  background: transparent;
 }
 .quick-add .hint {
   font-size: 11px;
@@ -1866,6 +1883,18 @@ select {
   animation: slideIn 0.18s ease-out;
 }
 
+.detail-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 10px 12px 2px;
+  flex: 0 0 auto;
+}
+.detail-close-btn {
+  width: 28px;
+  height: 28px;
+  color: var(--text-secondary);
+}
 .detail-scroll {
   flex: 1;
   overflow-y: auto;
@@ -2155,6 +2184,13 @@ select {
   color: var(--text);
   font-size: 14px;
   appearance: textfield;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.date-picker-time input:focus,
+.date-picker-time input:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 .date-picker-time input::-webkit-outer-spin-button,
 .date-picker-time input::-webkit-inner-spin-button {
@@ -2320,9 +2356,11 @@ button.detail-row:hover {
   font-size: 14px;
   cursor: pointer;
 }
-.detail-select:focus {
+.detail-select:focus,
+.detail-select:focus-visible {
   border-color: var(--accent);
   outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 .detail-select-button {
   display: flex;
@@ -2386,9 +2424,11 @@ button.detail-row:hover {
   color: var(--text);
   font-size: 14px;
 }
-.detail-number:focus {
+.detail-number:focus,
+.detail-number:focus-visible {
   border-color: var(--accent);
   outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 .detail-weekdays {
   display: flex;
@@ -2487,88 +2527,155 @@ button.detail-row:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-input);
-  padding: 6px 8px;
+  padding: 6px 10px;
   font-size: 13px;
   color: var(--text);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 .text-input:focus,
+.text-input:focus-visible,
 .date-input:focus,
-.select-input:focus {
+.date-input:focus-visible,
+.select-input:focus,
+.select-input:focus-visible {
   border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 .date-input {
   color-scheme: inherit;
 }
 
+.detail-row .row-icon.past,
+.detail-row .row-main.past {
+  color: var(--text-secondary);
+}
+
 .steps-list {
   display: flex;
   flex-direction: column;
+  margin-top: 2px;
 }
 .step-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px 6px;
-  border-radius: 4px;
+  gap: 15px;
+  padding: 0 6px 0 7px;
 }
-.step-row:hover {
-  background: var(--hover);
+.step-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  border-bottom: 1px solid var(--border);
+  transition: border-color 0.12s ease;
+}
+.step-body:focus-within {
+  border-bottom-color: var(--theme-accent, var(--accent));
 }
 .step-check {
   width: 16px;
   height: 16px;
-  border-radius: 3px;
+  border-radius: 50%;
   border: 1.5px solid var(--checkbox-border);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   flex: 0 0 auto;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.step-check:hover {
+  border-color: var(--theme-accent, var(--accent));
 }
 .step-check.checked {
   background: var(--theme-accent, var(--accent));
   border-color: var(--theme-accent, var(--accent));
 }
+.step-check-placeholder {
+  pointer-events: none;
+}
 .step-input {
   flex: 1;
-  font-size: 13px;
-  padding: 3px 0;
+  font-size: 14px;
+  padding: 6px 0;
   min-width: 0;
+  color: var(--text);
 }
 .step-input.done {
   color: var(--text-secondary);
   text-decoration: line-through;
 }
-.step-row .step-del {
-  opacity: 0;
-  width: 20px;
-  height: 20px;
-  border-radius: 3px;
-  display: flex;
+.step-more {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--text-tertiary);
+  flex: 0 0 auto;
+  transition: background 0.12s ease, color 0.12s ease;
 }
-.step-row:hover .step-del {
-  opacity: 1;
+.step-more:hover {
+  background: var(--hover);
+  color: var(--text);
 }
-.step-row .step-del:hover {
-  background: var(--border);
+.menu.step-menu {
+  z-index: 100;
+  width: 204px;
+  min-width: 204px;
+  padding: 6px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+.menu.step-menu button {
+  height: 38px;
+  padding: 0 14px;
+  gap: 14px;
+  font-size: 14px;
+  border-radius: 4px;
+}
+.menu.step-menu button > svg {
+  color: var(--text-secondary);
+  flex: 0 0 auto;
+}
+.menu.step-menu button.danger > svg {
+  color: var(--danger);
+}
+.menu.step-menu .sep {
+  margin: 5px -6px;
 }
 .add-step-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 4px;
-  color: var(--accent);
+  gap: 15px;
+  padding: 4px 6px 4px 7px;
+  min-height: 40px;
+  color: var(--theme-accent, var(--accent));
+  cursor: text;
 }
 .add-step-row input {
   flex: 1;
+  min-width: 0;
+  height: 32px;
   font-size: 14px;
-  color: var(--accent);
+  padding: 0 8px;
+  margin-left: -8px;
+  border-radius: 4px;
+  color: var(--text);
+  background: transparent;
+  outline: none;
+  transition: background 0.12s ease;
+}
+.add-step-row:hover input,
+.add-step-row.editing input {
+  background: var(--hover);
 }
 .add-step-row input::placeholder {
-  color: var(--accent);
+  color: var(--theme-accent, var(--accent));
   opacity: 1;
 }
 .add-step-row svg {
@@ -2595,7 +2702,7 @@ button.detail-row:hover {
   border-color: transparent;
   background: transparent;
 }
-.detail-block:focus-within {
+.detail-block:has(.notes-area:focus) {
   border-color: var(--theme-accent, var(--accent));
 }
 
@@ -2625,27 +2732,30 @@ button.detail-row:hover {
 .detail-footer {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
+  justify-content: space-between;
+  padding: 10px 14px;
   border-top: 1px solid var(--border);
   font-size: 12px;
-  color: var(--text-tertiary);
-}
-.detail-list-select {
-  width: 108px;
-  height: 26px;
-  padding: 0 4px;
-  border: none;
-  background: transparent;
   color: var(--text-secondary);
-  font-size: 12px;
+}
+.detail-footer-spacer {
+  width: 28px;
+  flex: 0 0 auto;
+}
+.detail-footer-meta {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .detail-footer .icon-btn {
   width: 28px;
   height: 28px;
+  color: var(--text-secondary);
 }
-.detail-footer .spacer {
-  flex: 1;
+.detail-delete-btn:hover {
+  color: var(--danger);
 }
 
 /* ---------------- 弹窗 ---------------- */
@@ -3538,8 +3648,11 @@ button.detail-row:hover {
   font-size: 13px;
   cursor: pointer;
 }
-.settings-select:focus {
+.settings-select:focus,
+.settings-select:focus-visible {
   border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .theme-radio-group {

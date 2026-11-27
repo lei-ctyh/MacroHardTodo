@@ -123,9 +123,8 @@ export function tasksForView(db: DB, view: View): Task[] {
         .filter((t) => !t.completed && t.importance === "high")
         .sort((a, b) => a.order - b.order);
     case "planned":
-      // 计划内把已完成任务也留在日期分组里（组内划线显示），智能计数仍只算未完成
       return all
-        .filter((t) => t.dueDate || t.reminderAt)
+        .filter((t) => !t.completed && (t.dueDate || t.reminderAt))
         .sort((a, b) => compareDueDate(a, b) || a.order - b.order);
     case "completed":
       return all
