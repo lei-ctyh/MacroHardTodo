@@ -6,7 +6,7 @@
 
 ## Stack
 
-- React 18 function components, Vite, Zustand, dnd-kit, date-fns, lucide-react
+- React 18 function components, Vite, Zustand, dnd-kit, date-fns, react-day-picker, lucide-react
 - Tauri 2 (WebView2) shell; OS, file, WebDAV and Graph work goes through Rust commands
 - One global stylesheet with design tokens: `src/styles.css` (no CSS-in-JS, no Tailwind classes in markup — Tailwind is only imported for reset/utilities)
 

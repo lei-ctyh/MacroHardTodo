@@ -19,18 +19,21 @@ MacroHardTodo/
 │   │   ├── GroupRow.tsx      sidebar group header (collapse, inline rename, hover menu, droppable)
 │   │   ├── SectionHeader.tsx view-level section header (task-list/date groups, completed area)
 │   │   ├── TaskRow.tsx
-│   │   ├── TaskDetail.tsx    right-side detail panel
+│   │   ├── TaskDetail.tsx    right-side detail panel (card sections, reminder/due/repeat menus, overdue cleanup)
+│   │   ├── DateTimePicker.tsx custom date/time picker backed by react-day-picker
+│   │   ├── RepeatDialog.tsx  narrow modal custom recurrence editor with portaled popovers
 │   │   ├── QuickAdd.tsx      fixed bottom add bar
 │   │   ├── SuggestionPanel.tsx
 │   │   ├── SettingsDialog.tsx / SyncDialog.tsx / MigrationWizard.tsx
-│   │   ├── Modal.tsx         shared dialog shell
+│   │   ├── Modal.tsx         shared dialog shell (supports wide / narrow)
 │   │   └── icons.tsx         central lucide re-exports (never import lucide elsewhere)
 │   ├── lib/                  pure TypeScript domain logic (no React imports)
 │   │   ├── model.ts          DB/Task/TaskList/TaskGroup/Step/Theme types + factories
 │   │   ├── merge.ts          per-entity LWW merge, tombstones, dedupe (lists, groups, tasks)
-│   │   ├── recurrence.ts     next-occurrence rules, buildNextTask
+│   │   ├── recurrence.ts     next-occurrence rules (with anchor day/month), catch-up, buildNextTask
 │   │   ├── views.ts          smart views, per-view sorting, counts, suggestion groups, sidebar sections, view-level task grouping
-│   │   ├── dates.ts          date formatting helpers
+│   │   ├── dates.ts          date formatting helpers (dueLabel, dayLabel, reminderLabel)
+│   │   ├── emoji.ts          leading-emoji grapheme splitting for custom list names
 │   │   ├── themes.ts         preset backgrounds, theme image resolution
 │   │   ├── graphImport.ts    Microsoft Graph mapping + idempotent import
 │   │   ├── syncClient.ts     WebDAV sync orchestration (merge + upload)
