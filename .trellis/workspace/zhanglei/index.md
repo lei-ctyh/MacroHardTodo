@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 4
+- **Total Sessions**: 5
 - **Last Active**: 2026-11-27
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~102 | Active |
+| `journal-1.md` | ~125 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 5 | 2026-11-27 | Polish sync and migration modals, fix WebDAV 409 and auth retry | `c6e3300`, `e96d00a` | `master` |
 | 4 | 2026-11-27 | Settings page redesign: full-window layout, preferences, Fluent polish | `27087cf`, `d44fee1`, `fd25886` | `master` |
 | 3 | 2026-11-27 | Task detail panel and recurrence UX polish | `3c41d57`, `29b2aad`, `ba3dc06` | `master` |
 | 2 | 2026-11-26 | View grouping: planned date buckets, per-list groups, theme accents | `0430ccf`, `4e4f468` | `master` |

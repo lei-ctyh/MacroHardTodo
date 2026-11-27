@@ -100,3 +100,26 @@ Replaced SettingsDialog with a full-window Microsoft To Do-style SettingsPage (s
 ### Status
 
 [OK] **Completed**
+
+
+## Session 5: Polish sync and migration modals, fix WebDAV 409 and auth retry
+<!-- trellis-session: v=2 fp=df09f19433018f16 -->
+
+**Date**: 2026-11-27
+**Task**: Polish sync and migration modals, fix WebDAV 409 and auth retry
+**Branch**: `master`
+
+### Summary
+
+Extracted shared ToggleSwitch; redesigned SyncDialog (provider presets, two-column credentials, Fluent encryption switch, unified green/error status bar) and MigrationWizard (4-step indicator, Fluent collapsible Entra guide, centered device code card, select-all preview, 3-column stats); fixed .btn svg icon sizing; fixed Jianguoyun HTTP 409 by probing base folder via resolveTestUrl and creating parent dirs in doSync; added automatic network-error retry in Graph device-code polling. 11 test files / 86 tests, tsc and vite build pass.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c6e3300` | feat: polish sync and migration modals, fix WebDAV 409 and auth retry |
+| `e96d00a` | docs(spec): document shared ToggleSwitch component |
+
+### Status
+
+[OK] **Completed**
