@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 11
+- **Total Sessions**: 12
 - **Last Active**: 2026-11-27
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~305 | Active |
+| `journal-1.md` | ~339 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 12 | 2026-11-27 | v0.1.0 release prep, multi-platform CI/CD, bilingual docs, and full-bleed icons | `b2a060d`, `7925327` | `master` |
 | 11 | 2026-11-27 | Dark mode theme adaptation and 14 CC0 photographic wallpapers | `037a82a`, `b05e4d2`, `00a9c42` | `master` |
 | 10 | 2026-11-27 | Suggestion panel polish and seamless return from TaskDetail | `1b815b8` | `master` |
 | 9 | 2026-11-27 | Task list alignment and flyout submenu viewport clamping | `088651e`, `754b688`, `d33066f` | `master` |

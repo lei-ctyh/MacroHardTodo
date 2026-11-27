@@ -303,3 +303,37 @@ Adapted dark mode for photo themes (dark frosted pills/QuickAdd, neutral slate #
 ### Status
 
 [OK] **Completed**
+
+
+## Session 12: v0.1.0 release prep, multi-platform CI/CD, bilingual docs, and full-bleed icons
+<!-- trellis-session: v=2 fp=3857de9dabbba3e7 -->
+
+**Date**: 2026-11-27
+**Task**: v0.1.0 release prep, multi-platform CI/CD, bilingual docs, and full-bleed icons
+**Branch**: `master`
+
+### Summary
+
+Prepared v0.1.0 release infrastructure: Vite __APP_VERSION__ injection, bump-version script, cross-platform NSIS/macOS/Linux bundle config and attachment_reveal, GitHub Actions CI & Release CD, issue templates, bilingual README + CHANGELOG, SettingsPage direct changelog/bug/feature links, and tightened 96% fill app icons.
+
+### Main Changes
+
+- Release engineering: vite.config.ts __APP_VERSION__ injection, scripts/bump-version.mjs, tauri.conf.json targets=all + SimpChinese NSIS installer, macOS/Linux attachment_reveal in storage.rs
+- CI/CD & community: .github/workflows/ci.yml (frontend + 3-OS cargo check), .github/workflows/release.yml (Windows NSIS + portable zip, macOS arm64/x64 DMG, Linux AppImage/DEB + SHA256SUMS), and Chinese bug/feature issue templates
+- Docs & Settings: bilingual README.md / README.zh-CN.md, CHANGELOG.md, and SettingsPage About links (CHANGELOG, bug report, feature request) + cross-platform system theme label
+- Icons: cropped excessive transparent padding from 79% to 96% width fill and regenerated public/logo.png + all src-tauri/icons assets via tauri icon
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b2a060d` | chore(release): prepare v0.1.0 CI/CD, bilingual docs, cross-platform config, and full-bleed app icons |
+| `7925327` | chore(task): archive 11-27-v010-release-prep |
+
+### Testing
+
+- [OK] tsc --noEmit (0 errors), vitest run (11 files / 87 tests passed), npm run build (succeeded), cargo check (0 warnings)
+
+### Status
+
+[OK] **Completed**
