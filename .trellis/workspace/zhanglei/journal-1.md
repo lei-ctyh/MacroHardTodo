@@ -123,3 +123,26 @@ Extracted shared ToggleSwitch; redesigned SyncDialog (provider presets, two-colu
 ### Status
 
 [OK] **Completed**
+
+
+## Session 6: Customizable profile modal and native context menu guard
+<!-- trellis-session: v=2 fp=b0306cff2994a4d3 -->
+
+**Date**: 2026-11-27
+**Task**: Customizable profile modal and native context menu guard
+**Branch**: `master`
+
+### Summary
+
+Replaced hardcoded local user/data strings with customizable profileName and profileSubtitle resolved via profileDisplay (fallback to MacroHard Todo and configured WebDAV user); built a centered-avatar Edit Profile modal in SettingsPage; fixed input focus double-ring and Escape modal guard in App; disabled default WebView2 browser context menu outside editable inputs and text selections. 87/87 tests, tsc and vite build pass.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a67a604` | feat: add customizable profile modal and disable native browser context menu |
+| `2e5c221` | docs(spec): document profile modal and global contextmenu guard |
+
+### Status
+
+[OK] **Completed**
