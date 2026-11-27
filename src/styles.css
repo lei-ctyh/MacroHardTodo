@@ -539,9 +539,10 @@ select {
   background: var(--bg-input);
 }
 
-/* 右键菜单挂到 body 上：避免侧栏/群组容器上的 transform 改变 fixed 定位基准 */
+/* 右键菜单挂到 body 上：避免侧栏/群组/任务容器上的 transform 改变 fixed 定位基准 */
 .menu.group-menu,
-.menu.list-menu {
+.menu.list-menu,
+.menu.task-context-menu {
   z-index: 100;
 }
 
@@ -551,6 +552,42 @@ select {
 
 .menu.list-menu {
   min-width: 220px;
+}
+
+.menu.task-context-menu {
+  width: 264px;
+  min-width: 264px;
+  padding: 6px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+.menu.task-context-menu button {
+  height: 38px;
+  padding: 0 14px;
+  gap: 14px;
+  font-size: 14px;
+  border-radius: 4px;
+}
+.menu.task-context-menu button > svg {
+  color: var(--text-secondary);
+  flex: 0 0 auto;
+}
+.menu.task-context-menu button.danger > svg {
+  color: var(--danger);
+}
+.menu.task-context-menu .sep {
+  margin: 5px -6px;
+}
+.menu.task-context-menu .menu-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding-left: 20px;
+}
+.menu.task-context-menu .menu-caret {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-secondary);
 }
 
 .list-menu-flyout {
@@ -566,11 +603,43 @@ select {
   height: 100%;
 }
 
+.list-menu-flyout.flip-left::after {
+  right: auto;
+  left: -8px;
+}
+
 .menu.list-submenu {
   position: absolute;
   top: -4px;
   left: calc(100% + 4px);
   min-width: 190px;
+}
+
+.menu.task-submenu {
+  min-width: 204px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.menu.task-submenu.flip-left {
+  left: auto;
+  right: calc(100% + 4px);
+}
+
+.task-submenu-emoji {
+  width: 15px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.task-submenu-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .list-submenu .menu-check {

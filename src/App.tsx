@@ -13,6 +13,7 @@ import {
 } from "@tauri-apps/plugin-notification";
 import { useStore } from "./store/useStore";
 import { api } from "./lib/api";
+import { todayISO } from "./lib/dates";
 import { Sidebar } from "./components/Sidebar";
 import { MainPane } from "./components/MainPane";
 import { TaskDetail } from "./components/TaskDetail";
@@ -187,6 +188,47 @@ export default function App() {
           return;
         }
         st.selectTask(null);
+        return;
+      }
+
+      const target = e.target as HTMLElement | null;
+      const inEditable = Boolean(
+        target?.closest('input, textarea, select, [contenteditable="true"]'),
+      );
+      if (inEditable) return;
+
+      const st = useStore.getState();
+      if (
+        st.settingsOpen ||
+        st.dialog ||
+        st.confirm ||
+        !st.selectedTaskId ||
+        document.querySelector('[role="dialog"][aria-modal="true"]')
+      ) {
+        return;
+      }
+      const task = st.db.tasks.find(
+        (t) => t.id === st.selectedTaskId && !t.deletedAt,
+      );
+      if (!task) return;
+
+      const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && key === "t") {
+        e.preventDefault();
+        const today = todayISO();
+        st.setMyDay(task.id, task.myDay === today ? null : today);
+      } else if ((e.ctrlKey || e.metaKey) && key === "d") {
+        e.preventDefault();
+        st.toggleComplete(task.id);
+      } else if (e.key === "Delete") {
+        e.preventDefault();
+        st.confirmDelete({
+          title: "删除任务",
+          message: `将永久删除任务“${task.title}”？`,
+          confirmLabel: "删除",
+          danger: true,
+          onConfirm: () => st.deleteTask(task.id),
+        });
       }
     };
     window.addEventListener("keydown", onKey);

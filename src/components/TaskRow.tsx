@@ -1,4 +1,8 @@
-import type { CSSProperties, ReactNode } from "react";
+import type {
+  CSSProperties,
+  MouseEvent as ReactMouseEvent,
+  ReactNode,
+} from "react";
 import type { Task } from "../lib/model";
 import { dueLabel, isOverdue } from "../lib/dates";
 import { stepProgress } from "../lib/views";
@@ -21,6 +25,7 @@ export interface TaskRowProps {
   onSelect: () => void;
   onToggle: () => void;
   onToggleStar: () => void;
+  onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void;
   setNodeRef?: (el: HTMLElement | null) => void;
   style?: CSSProperties;
   isDragging?: boolean;
@@ -34,6 +39,7 @@ export function TaskRow({
   onSelect,
   onToggle,
   onToggleStar,
+  onContextMenu,
   setNodeRef,
   style,
   isDragging,
@@ -98,6 +104,7 @@ export function TaskRow({
       style={style}
       className={`task-row ${selected ? "selected" : ""} ${isDragging ? "dragging" : ""}`}
       onClick={onSelect}
+      onContextMenu={onContextMenu}
     >
       <div
         className="drag-handle"

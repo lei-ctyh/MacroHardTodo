@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
+import { createPortal } from "react-dom";
 import {
   DndContext,
   PointerSensor,
@@ -36,6 +45,8 @@ import { splitLeadingEmoji } from "../lib/emoji";
 import { QuickAdd } from "./QuickAdd";
 import { SectionHeader } from "./SectionHeader";
 import { TaskRow } from "./TaskRow";
+import { TaskContextMenu } from "./TaskContextMenu";
+import { DateTimePicker } from "./DateTimePicker";
 import { SuggestionPanel } from "./SuggestionPanel";
 import { ViewMenu } from "./ViewMenu";
 import {
@@ -73,6 +84,7 @@ export function MainPane({
   const selectTask = useStore((s) => s.selectTask);
   const toggleComplete = useStore((s) => s.toggleComplete);
   const toggleImportance = useStore((s) => s.toggleImportance);
+  const updateTask = useStore((s) => s.updateTask);
   const reorderTasks = useStore((s) => s.reorderTasks);
   const ensureAttachment = useStore((s) => s.ensureAttachment);
   const focusQuickAdd = useStore((s) => s.focusQuickAdd);
@@ -87,6 +99,16 @@ export function MainPane({
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
+  const [taskMenu, setTaskMenu] = useState<{
+    taskId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [datePickerTarget, setDatePickerTarget] = useState<{
+    taskId: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const renameCancelled = useRef(false);
 
   const listNames = useMemo(() => {
@@ -169,6 +191,12 @@ export function MainPane({
     onSelect: () => selectTask(task.id === selectedTaskId ? null : task.id),
     onToggle: () => toggleComplete(task.id),
     onToggleStar: () => toggleImportance(task.id),
+    onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setDatePickerTarget(null);
+      setTaskMenu({ taskId: task.id, x: event.clientX, y: event.clientY });
+    },
   });
 
   const listForTheme = useMemo(
@@ -218,6 +246,8 @@ export function MainPane({
     setSuggestOpen(isMyDay && !narrow);
     setMenuOpen(false);
     setRenaming(false);
+    setTaskMenu(null);
+    setDatePickerTarget(null);
   }, [view, isMyDay, narrow]);
 
   useEffect(() => {
@@ -398,7 +428,12 @@ export function MainPane({
         <div className="header-actions">{actions}</div>
       </div>
 
-      <div className="task-scroll">
+      <div
+        className="task-scroll"
+        onScroll={() => {
+          if (taskMenu) setTaskMenu(null);
+        }}
+      >
         {groupedView ? (
           sections.map((section) => {
             const isCollapsed = collapsed.includes(section.key);
@@ -492,6 +527,55 @@ export function MainPane({
         }}
       />
     ) : null}
+
+    {(() => {
+      if (!taskMenu) return null;
+      const target = db.tasks.find(
+        (t) => t.id === taskMenu.taskId && !t.deletedAt,
+      );
+      if (!target) return null;
+      return (
+        <TaskContextMenu
+          task={target}
+          x={taskMenu.x}
+          y={taskMenu.y}
+          onClose={() => setTaskMenu(null)}
+          onPickDate={(t, px, py) =>
+            setDatePickerTarget({ taskId: t.id, x: px, y: py })
+          }
+        />
+      );
+    })()}
+
+    {(() => {
+      if (!datePickerTarget) return null;
+      const target = db.tasks.find(
+        (t) => t.id === datePickerTarget.taskId && !t.deletedAt,
+      );
+      if (!target) return null;
+      const left = Math.max(
+        8,
+        Math.min(datePickerTarget.x, window.innerWidth - 300),
+      );
+      const top = Math.max(
+        8,
+        Math.min(datePickerTarget.y, window.innerHeight - 360),
+      );
+      return createPortal(
+        <div className="date-picker-portal" style={{ left, top }}>
+          <DateTimePicker
+            initialDate={target.dueDate}
+            withTime={false}
+            onCancel={() => setDatePickerTarget(null)}
+            onSave={(date) => {
+              updateTask(target.id, { dueDate: date, dueTime: undefined });
+              setDatePickerTarget(null);
+            }}
+          />
+        </div>,
+        document.body,
+      );
+    })()}
 
     </>
   );
