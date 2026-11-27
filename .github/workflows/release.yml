@@ -15,8 +15,61 @@ permissions:
   contents: write
 
 jobs:
+  create-release:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+      release_id: ${{ steps.create.outputs.release_id }}
+    steps:
+      - name: Resolve release tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create or reuse draft release
+        id: create
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          EXISTING_ID=$(gh api "repos/${{ github.repository }}/releases" --jq "[.[] | select(.tag_name == \"${TAG}\")][0].id // empty")
+          if [ -n "$EXISTING_ID" ]; then
+            echo "release_id=${EXISTING_ID}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          cat <<'EOF' > release-body.md
+          ## 安装包说明
+
+          - **Windows**：下载 `*_x64-setup.exe`（NSIS 中文安装向导，无需管理员权限）或 `*_windows_x64_portable.zip`（免安装压缩包）
+          - **macOS**：Apple Silicon（M1–M4）下载 `*_aarch64.dmg`，Intel 机型下载 `*_x64.dmg`
+          - **Linux**：下载 `*.AppImage`（通用）或 `*.deb`（Debian / Ubuntu）
+
+          > **安全提示**：开源项目暂未购买商业代码签名证书。Windows 首次运行若弹出 SmartScreen 拦截，请点击「更多信息」→「仍要运行」；macOS 若提示无法验证开发者，请在「系统设置 → 隐私与安全性」中点击「仍要打开」。所有产物均由 GitHub Actions 公开源码自动构建，可通过附件 `SHA256SUMS.txt` 校验完整性。
+
+          完整变更记录见 [CHANGELOG.md](https://github.com/lei-ctyh/MacroHardTodo/blob/master/CHANGELOG.md)。
+          EOF
+
+          RELEASE_ID=$(gh api -X POST "repos/${{ github.repository }}/releases" \
+            -f tag_name="${TAG}" \
+            -f name="MacroHard Todo ${TAG}" \
+            -F draft=true \
+            -F prerelease=false \
+            -F body=@release-body.md \
+            --jq '.id')
+          echo "release_id=${RELEASE_ID}" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build (${{ matrix.label }})
+    needs: create-release
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
@@ -46,18 +99,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve release tag
-        id: meta
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ inputs.tag }}"
-          else
-            TAG="${GITHUB_REF_NAME}"
-          fi
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-
       - name: Install Linux Tauri dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
@@ -85,20 +126,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ steps.meta.outputs.tag }}
-          releaseName: "MacroHard Todo ${{ steps.meta.outputs.tag }}"
-          releaseBody: |
-            ## 安装包说明
-
-            - **Windows**：下载 `*_x64-setup.exe`（NSIS 中文安装向导，无需管理员权限）或 `*_windows_x64_portable.zip`（免安装压缩包）
-            - **macOS**：Apple Silicon（M1–M4）下载 `*_aarch64.dmg`，Intel 机型下载 `*_x64.dmg`
-            - **Linux**：下载 `*.AppImage`（通用）或 `*.deb`（Debian / Ubuntu）
-
-            > **安全提示**：开源项目暂未购买商业代码签名证书。Windows 首次运行若弹出 SmartScreen 拦截，请点击「更多信息」→「仍要运行」；macOS 若提示无法验证开发者，请在「系统设置 → 隐私与安全性」中点击「仍要打开」。所有产物均由 GitHub Actions 公开源码自动构建，可通过附件 `SHA256SUMS.txt` 校验完整性。
-
-            完整变更记录见 [CHANGELOG.md](https://github.com/lei-ctyh/MacroHardTodo/blob/master/CHANGELOG.md)。
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
 
       - name: Package and upload Windows portable zip
@@ -107,35 +135,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $ver = "${{ steps.meta.outputs.version }}"
-          $tag = "${{ steps.meta.outputs.tag }}"
+          $ver = "${{ needs.create-release.outputs.version }}"
+          $tag = "${{ needs.create-release.outputs.tag }}"
           $exe = "src-tauri/target/release/macrohard-todo.exe"
           $zip = "MacroHard-Todo_${ver}_windows_x64_portable.zip"
           Compress-Archive -Path $exe -DestinationPath $zip -Force
-          gh release upload $tag $zip --clobber
+          gh release upload $tag $zip -R "${{ github.repository }}" --clobber
 
   checksums:
     name: Generate SHA256SUMS
-    needs: build
+    needs: [create-release, build]
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve release tag
-        id: meta
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            TAG="${{ inputs.tag }}"
-          else
-            TAG="${GITHUB_REF_NAME}"
-          fi
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-
       - name: Download assets and upload SHA256SUMS.txt
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TAG="${{ needs.create-release.outputs.tag }}"
           mkdir -p release-assets
-          gh release download "${{ steps.meta.outputs.tag }}" --dir release-assets --skip-existing
+          gh release download "${TAG}" -R "${{ github.repository }}" --dir release-assets --skip-existing
           rm -f release-assets/SHA256SUMS.txt
           (cd release-assets && sha256sum * > ../SHA256SUMS.txt)
           cat SHA256SUMS.txt
-          gh release upload "${{ steps.meta.outputs.tag }}" SHA256SUMS.txt --clobber
+          gh release upload "${TAG}" SHA256SUMS.txt -R "${{ github.repository }}" --clobber
