@@ -203,3 +203,37 @@ Aligned TaskDetail layout, step menu, and dynamic 添加步骤/下一步 UX with
 ### Status
 
 [OK] **Completed**
+
+
+## Session 9: Task list alignment and flyout submenu viewport clamping
+<!-- trellis-session: v=2 fp=8b876bb41faad5e8 -->
+
+**Date**: 2026-11-27
+**Task**: Task list alignment and flyout submenu viewport clamping
+**Branch**: `master`
+
+### Summary
+
+Aligned TaskRow 2-line card layout, middle-dot metadata, overdue recurring amber bottom bar, section pills, and 40px page margins with Microsoft To Do; fixed bottom viewport clipping on task and sidebar flyout submenus.
+
+### Main Changes
+
+- TaskRow & dates.ts: crisp 52px 2-line cards, clean empty checkbox for incomplete tasks, middle-dot metadata order (My Day, emoji list name, 第 X 步，共 Y 步, compact dueDateLabel + repeat icon, reminder date, attachments, NoteIcon instead of note preview), amber bottom bar on overdue recurring tasks
+- MainPane & CSS: unified 40px horizontal column across header/list/QuickAdd and tightened 30px translucent section pills
+- TaskContextMenu & Sidebar: useLayoutEffect viewport clamping so move-to-list and move-to-group submenus shift upward when near the bottom edge
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `088651e` | feat: align task row layout with Microsoft To Do and clamp flyout submenus |
+| `754b688` | docs(spec): update TaskRow layout and unified 40px list column guidelines |
+| `d33066f` | chore(task): archive 11-27-task-list-submenu-polish |
+
+### Testing
+
+- [OK] tsc --noEmit (0 errors), vitest run (11 files / 87 tests passed), npm run build (succeeded)
+
+### Status
+
+[OK] **Completed**
