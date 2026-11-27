@@ -1206,14 +1206,17 @@ select {
 /* ---------------- 建议面板 ---------------- */
 
 .suggest-panel {
-  width: 360px;
-  flex: 0 0 360px;
+  width: var(--detail-w);
+  flex: 0 0 var(--detail-w);
   border-left: 1px solid var(--border);
   background: var(--bg-main);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   animation: slideIn 0.18s ease-out;
+}
+.suggest-panel.no-anim {
+  animation: none;
 }
 
 .suggest-head {

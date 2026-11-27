@@ -96,6 +96,7 @@ export function MainPane({
 
   const [bgUrl, setBgUrl] = useState<string | undefined>();
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [skipSuggestAnim, setSkipSuggestAnim] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
@@ -196,7 +197,11 @@ export function MainPane({
     selected: task.id === selectedTaskId,
     listName: withListName ? listNames.get(task.listId) : undefined,
     hideMyDay: isMyDay,
-    onSelect: () => selectTask(task.id === selectedTaskId ? null : task.id),
+    onSelect: () => {
+      setSkipSuggestAnim(false);
+      setSuggestOpen(false);
+      selectTask(task.id === selectedTaskId ? null : task.id);
+    },
     onToggle: () => toggleComplete(task.id),
     onToggleStar: () => toggleImportance(task.id),
     onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -251,16 +256,13 @@ export function MainPane({
   }, [themeKey, ensureAttachment]);
 
   useEffect(() => {
+    setSkipSuggestAnim(false);
     setSuggestOpen(isMyDay && !narrow);
     setMenuOpen(false);
     setRenaming(false);
     setTaskMenu(null);
     setDatePickerTarget(null);
   }, [view, isMyDay, narrow]);
-
-  useEffect(() => {
-    if (selectedTaskId) setSuggestOpen(false);
-  }, [selectedTaskId]);
 
   const startRename = () => {
     if (view.type !== "list") return;
@@ -285,16 +287,21 @@ export function MainPane({
     if (trimmed) renameList(view.id, trimmed);
   };
 
+  const suggestVisible = suggestOpen && isMyDay && !selectedTaskId;
+
   const actions = (
     <>
       {isMyDay ? (
         <button
-          className={`icon-btn ${suggestOpen ? "active" : ""}`}
+          className={`icon-btn ${suggestVisible ? "active" : ""}`}
           onClick={() => {
-            setSuggestOpen((open) => {
-              if (!open) selectTask(null);
-              return !open;
-            });
+            setSkipSuggestAnim(false);
+            if (suggestVisible) {
+              setSuggestOpen(false);
+            } else {
+              selectTask(null);
+              setSuggestOpen(true);
+            }
           }}
           title="建议"
         >
@@ -526,11 +533,15 @@ export function MainPane({
       ) : null}
     </main>
 
-    {suggestOpen && isMyDay ? (
+    {suggestVisible ? (
       <SuggestionPanel
-        onClose={() => setSuggestOpen(false)}
-        onOpenTask={(id) => {
+        noAnim={skipSuggestAnim}
+        onClose={() => {
+          setSkipSuggestAnim(false);
           setSuggestOpen(false);
+        }}
+        onOpenTask={(id) => {
+          setSkipSuggestAnim(true);
           selectTask(id);
         }}
       />

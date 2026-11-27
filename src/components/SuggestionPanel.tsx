@@ -3,13 +3,15 @@ import { useStore } from "../store/useStore";
 import { activeLists, type Task } from "../lib/model";
 import { myDaySuggestionGroups, stepProgress } from "../lib/views";
 import { splitLeadingEmoji } from "../lib/emoji";
-import { dueLabel, isOverdue, todayISO } from "../lib/dates";
+import { dueDateLabel, todayISO } from "../lib/dates";
 import { CloseIcon, PlusIcon } from "./icons";
 
 export function SuggestionPanel({
+  noAnim,
   onClose,
   onOpenTask,
 }: {
+  noAnim?: boolean;
   onClose: () => void;
   onOpenTask: (id: string) => void;
 }) {
@@ -27,13 +29,10 @@ export function SuggestionPanel({
     return map;
   }, [db]);
 
-  const total = groups.reduce((sum, group) => sum + group.tasks.length, 0);
-
   return (
-    <aside className="suggest-panel">
+    <aside className={`suggest-panel ${noAnim ? "no-anim" : ""}`}>
       <div className="suggest-head">
         <div className="suggest-head-title">建议</div>
-        {total > 0 ? <span className="nav-count">{total} 项</span> : null}
         <span className="spacer" />
         <button className="icon-btn" onClick={onClose} title="关闭建议">
           <CloseIcon />
@@ -81,7 +80,8 @@ function SuggestionRow({
   onComplete: () => void;
 }) {
   const { done, total } = stepProgress(task);
-  const overdue = isOverdue(task.dueDate, task.dueTime);
+  const today = todayISO();
+  const overdue = Boolean(task.dueDate && task.dueDate < today);
 
   return (
     <div className="suggest-row" onClick={onOpen}>
@@ -100,12 +100,12 @@ function SuggestionRow({
           <span>{listName}</span>
           {total > 0 ? (
             <span>
-              · 第 {done + 1 > total ? total : done + 1} 步，共 {total} 步
+              · 第 {done} 步，共 {total} 步
             </span>
           ) : null}
           {task.dueDate ? (
             <span className={overdue ? "overdue" : ""}>
-              · {dueLabel(task.dueDate, task.dueTime)}
+              · {dueDateLabel(task.dueDate)}
             </span>
           ) : null}
         </div>
