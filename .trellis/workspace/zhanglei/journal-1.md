@@ -169,3 +169,37 @@ Added portaled TaskContextMenu matching Microsoft To Do proportions (264px width
 ### Status
 
 [OK] **Completed**
+
+
+## Session 8: TaskDetail polish, inline input focus, and planned/completed alignment
+<!-- trellis-session: v=2 fp=345a2ab7c05afa81 -->
+
+**Date**: 2026-11-27
+**Task**: TaskDetail polish, inline input focus, and planned/completed alignment
+**Branch**: `master`
+
+### Summary
+
+Aligned TaskDetail layout, step menu, and dynamic 添加步骤/下一步 UX with Microsoft To Do; removed double blue focus borders across inline/form inputs; hid Completed sidebar count badge and excluded completed tasks from Planned date buckets.
+
+### Main Changes
+
+- TaskDetail: top-right close bar, circular step checks aligned with title checkbox, portaled ⋮ step menu (complete/promote/delete), dynamic 添加步骤/下一步 input with hover pill, active My Day + muted past reminders, centered footer
+- CSS: unified single-layer Fluent focus styles across inline rename, step, tag, date-picker, and settings inputs
+- Sidebar & Views: hid Completed count badge and filtered completed tasks out of Planned date buckets so 已逾期 matches sidebar count
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ba9be11` | feat: align task detail panel, inline inputs, and planned/completed views |
+| `48462b0` | docs(spec): update TaskDetail, focus ring, and planned/completed guidelines |
+| `cf0feb2` | chore(task): archive 11-27-task-detail-polish |
+
+### Testing
+
+- [OK] tsc --noEmit (0 errors), vitest run (11 files / 87 tests passed), npm run build (succeeded)
+
+### Status
+
+[OK] **Completed**

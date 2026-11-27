@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
+- **Total Sessions**: 8
 - **Last Active**: 2026-11-27
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~171 | Active |
+| `journal-1.md` | ~205 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-11-27 | TaskDetail polish, inline input focus, and planned/completed alignment | `ba9be11`, `48462b0`, `cf0feb2` | `master` |
 | 7 | 2026-11-27 | Task row right-click context menu and shortcuts | `30ddea3`, `d26105a` | `master` |
 | 6 | 2026-11-27 | Customizable profile modal and native context menu guard | `a67a604`, `2e5c221` | `master` |
 | 5 | 2026-11-27 | Polish sync and migration modals, fix WebDAV 409 and auth retry | `c6e3300`, `e96d00a` | `master` |
