@@ -52,3 +52,27 @@ Implemented Microsoft To Do-style view grouping: planned date buckets (overdue/t
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: Task detail panel and recurrence UX polish
+<!-- trellis-session: v=2 fp=6dcf551041341657 -->
+
+**Date**: 2026-11-27
+**Task**: Task detail panel and recurrence UX polish
+**Branch**: `master`
+
+### Summary
+
+Rebuilt TaskDetail into card sections with theme-accented reminder/due/repeat rows and an overdue-recurrence catch-up banner; added DateTimePicker (react-day-picker) and RepeatDialog with portaled popovers; preserved monthly/yearly anchor days, defaulted missing due date to today, and extended recurrence tests. Added Trellis Antigravity adapter and updated frontend specs.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3c41d57` | feat: polish task detail panel and recurrence UX |
+| `29b2aad` | chore(trellis): add Antigravity adapter |
+| `ba3dc06` | docs(spec): document task detail panel and recurrence UX |
+
+### Status
+
+[OK] **Completed**
