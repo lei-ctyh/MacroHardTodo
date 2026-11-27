@@ -79,6 +79,7 @@ export function MainPane({
   const setSort = useStore((s) => s.setSort);
   const renameList = useStore((s) => s.renameList);
   const deleteList = useStore((s) => s.deleteList);
+  const confirmDelete = useStore((s) => s.confirmDelete);
   const toggleSection = useStore((s) => s.toggleSection);
 
   const [bgUrl, setBgUrl] = useState<string | undefined>();
@@ -291,8 +292,17 @@ export function MainPane({
               setMenuOpen(false);
             }}
             onDelete={() => {
-              if (view.type === "list") deleteList(view.id);
               setMenuOpen(false);
+              if (view.type !== "list") return;
+              const listId = view.id;
+              const listName = listForTheme?.name ?? info.title;
+              confirmDelete({
+                title: "删除列表",
+                message: `将删除列表“${listName}”，其中的任务会保留并移至「任务」清单。`,
+                confirmLabel: "删除",
+                danger: true,
+                onConfirm: () => deleteList(listId),
+              });
             }}
             onClose={() => setMenuOpen(false)}
           />

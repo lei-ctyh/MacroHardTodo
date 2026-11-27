@@ -16,7 +16,8 @@ import { api } from "./lib/api";
 import { Sidebar } from "./components/Sidebar";
 import { MainPane } from "./components/MainPane";
 import { TaskDetail } from "./components/TaskDetail";
-import { SettingsDialog } from "./components/SettingsDialog";
+import { SettingsPage } from "./components/SettingsPage";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import { SyncDialog } from "./components/SyncDialog";
 import { MigrationWizard } from "./components/MigrationWizard";
 import { CloseSmallIcon, MenuIcon, WarningIcon } from "./components/icons";
@@ -27,6 +28,7 @@ const NARROW_QUERY = "(max-width: 760px)";
 export default function App() {
   const ready = useStore((s) => s.ready);
   const db = useStore((s) => s.db);
+  const settingsOpen = useStore((s) => s.settingsOpen);
   const dialog = useStore((s) => s.dialog);
   const view = useStore((s) => s.view);
   const selectedTaskId = useStore((s) => s.selectedTaskId);
@@ -156,12 +158,17 @@ export default function App() {
         useStore.getState().focusQuickAdd();
       }
       if (e.key === "Escape") {
+        const st = useStore.getState();
+        if (st.dialog || st.confirm) return;
         if (sidebarOpen) {
           setSidebarOpen(false);
           return;
         }
-        const st = useStore.getState();
-        if (!st.dialog) st.selectTask(null);
+        if (st.settingsOpen) {
+          st.closeSettings();
+          return;
+        }
+        st.selectTask(null);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -264,34 +271,45 @@ export default function App() {
 
   return (
     <div
-      className={`app-shell ${sidebarOpen ? "sidebar-open" : ""}`}
+      className={`app-shell ${sidebarOpen ? "sidebar-open" : ""} ${
+        settingsOpen ? "settings-mode" : ""
+      }`}
       style={{ "--sidebar-w": `${sidebarWidth}px` } as CSSProperties}
     >
-      <Sidebar />
-      {narrow && sidebarOpen ? (
-        <div
-          className="sidebar-scrim"
-          aria-hidden
-          onClick={() => setSidebarOpen(false)}
-        />
-      ) : null}
-      <div
-        className="sidebar-resizer"
-        role="separator"
-        aria-orientation="vertical"
-        aria-valuemin={200}
-        aria-valuemax={420}
-        aria-valuenow={Math.round(sidebarWidth)}
-        title="拖动调整侧栏宽度，双击恢复默认"
-        onPointerDown={startSidebarResize}
-        onDoubleClick={resetSidebarWidth}
-      />
-      <MainPane onOpenSidebar={() => setSidebarOpen(true)} narrow={narrow} />
-      {selectedTaskId ? <TaskDetail /> : null}
+      {settingsOpen ? (
+        <SettingsPage />
+      ) : (
+        <>
+          <Sidebar />
+          {narrow && sidebarOpen ? (
+            <div
+              className="sidebar-scrim"
+              aria-hidden
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+          <div
+            className="sidebar-resizer"
+            role="separator"
+            aria-orientation="vertical"
+            aria-valuemin={200}
+            aria-valuemax={420}
+            aria-valuenow={Math.round(sidebarWidth)}
+            title="拖动调整侧栏宽度，双击恢复默认"
+            onPointerDown={startSidebarResize}
+            onDoubleClick={resetSidebarWidth}
+          />
+          <MainPane
+            onOpenSidebar={() => setSidebarOpen(true)}
+            narrow={narrow}
+          />
+          {selectedTaskId ? <TaskDetail /> : null}
+        </>
+      )}
 
-      {dialog === "settings" ? <SettingsDialog /> : null}
       {dialog === "sync" ? <SyncDialog /> : null}
       {dialog === "migration" ? <MigrationWizard /> : null}
+      <ConfirmDialog />
 
       {loadWarning && !warningDismissed ? (
         <div

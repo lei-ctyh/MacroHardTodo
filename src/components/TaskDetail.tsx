@@ -103,6 +103,7 @@ export function TaskDetail() {
   const updateTask = useStore((s) => s.updateTask);
   const toggleComplete = useStore((s) => s.toggleComplete);
   const deleteTask = useStore((s) => s.deleteTask);
+  const confirmDelete = useStore((s) => s.confirmDelete);
   const duplicateTask = useStore((s) => s.duplicateTask);
   const toggleImportance = useStore((s) => s.toggleImportance);
   const setMyDay = useStore((s) => s.setMyDay);
@@ -176,7 +177,13 @@ export function TaskDetail() {
   const steps = task.steps.filter((s) => !s.deletedAt).sort((a, b) => a.order - b.order);
   const attachments = (task.attachments ?? []).filter((a) => !a.deletedAt);
   const lists = activeLists(db);
-  const inMyDay = task.myDay === todayISO();
+  const today = todayISO();
+  const manuallyInMyDay = task.myDay === today;
+  const autoInMyDay =
+    !manuallyInMyDay &&
+    (db.settings.showDueTodayInMyDay ?? true) &&
+    task.dueDate === today;
+  const inMyDay = manuallyInMyDay || autoInMyDay;
 
   const setRecurrence = (rule: RecurrenceRule | undefined) => {
     updateTask(task.id, {
@@ -347,7 +354,9 @@ export function TaskDetail() {
         <div className="detail-block">
           <button
             className="detail-row"
-            onClick={() => setMyDay(task.id, inMyDay ? null : todayISO())}
+            onClick={() =>
+              setMyDay(task.id, manuallyInMyDay ? null : today)
+            }
           >
             <span
               className="row-icon"
@@ -360,7 +369,11 @@ export function TaskDetail() {
               <SunIcon />
             </span>
             <span className="row-value">
-              {inMyDay ? "从我的一天移除" : "添加到“我的一天”"}
+              {manuallyInMyDay
+                ? "从我的一天移除"
+                : autoInMyDay
+                  ? "已在“我的一天”（今天截止）"
+                  : "添加到“我的一天”"}
             </span>
           </button>
         </div>
@@ -793,7 +806,15 @@ export function TaskDetail() {
         </button>
         <button
           className="icon-btn"
-          onClick={() => deleteTask(task.id)}
+          onClick={() =>
+            confirmDelete({
+              title: "删除任务",
+              message: `将永久删除任务“${task.title}”？`,
+              confirmLabel: "删除",
+              danger: true,
+              onConfirm: () => deleteTask(task.id),
+            })
+          }
           title="删除任务"
           aria-label="删除任务"
         >

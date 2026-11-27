@@ -5,6 +5,7 @@ export type SortKey = "manual" | "importance" | "due" | "added" | "alpha";
 
 export const SMART_VIEWS = ["myday", "important", "planned", "all", "completed"] as const;
 export type SmartViewId = (typeof SMART_VIEWS)[number];
+export type ToggleableSmartViewId = "important" | "planned" | "all" | "completed";
 
 /** 固定默认清单：不属于任何清单的新任务都进入这里 */
 export const DEFAULT_LIST_ID = "list_default";
@@ -144,6 +145,22 @@ export interface Settings {
   sidebarWidth?: number;
   /** 本地头像；仅本地保存 */
   avatar?: ThemeImage;
+  /** 在列表顶部添加新任务 */
+  addTasksOnTop: boolean;
+  /** 将标星任务移至列表顶部 */
+  moveStarredToTop: boolean;
+  /** 完成任务时播放提示音 */
+  playCompletionSound: boolean;
+  /** 删除任务/列表/空分组前弹窗确认 */
+  confirmBeforeDelete: boolean;
+  /** 一周的开始：0 = 周日，1 = 周一 */
+  weekStartsOn: 0 | 1;
+  /** 侧栏智能列表显隐（我的一天固定显示） */
+  smartListVisibility: Record<ToggleableSmartViewId, boolean>;
+  /** 自动隐藏空的智能列表 */
+  autoHideEmptySmartLists: boolean;
+  /** 在「我的一天」中自动显示今天截止的任务 */
+  showDueTodayInMyDay: boolean;
 }
 
 export interface DB {
@@ -239,6 +256,19 @@ export const DEFAULT_SETTINGS: Settings = {
   sortBy: {},
   collapsedGroups: [],
   sidebarWidth: 240,
+  addTasksOnTop: true,
+  moveStarredToTop: true,
+  playCompletionSound: true,
+  confirmBeforeDelete: true,
+  weekStartsOn: 1,
+  smartListVisibility: {
+    important: true,
+    planned: true,
+    all: true,
+    completed: true,
+  },
+  autoHideEmptySmartLists: false,
+  showDueTodayInMyDay: true,
 };
 
 export function nowMs(): number {
@@ -314,7 +344,10 @@ export function createDB(deviceId: string): DB {
     groups: [],
     tasks: [],
     shared: {},
-    settings: { ...DEFAULT_SETTINGS },
+    settings: {
+      ...DEFAULT_SETTINGS,
+      smartListVisibility: { ...DEFAULT_SETTINGS.smartListVisibility },
+    },
   };
 }
 

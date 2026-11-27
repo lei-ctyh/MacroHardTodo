@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { open } from "@tauri-apps/plugin-dialog";
 import {
   DndContext,
   PointerSensor,
@@ -24,10 +23,17 @@ import {
   type TaskGroup,
   type TaskList,
 } from "../lib/model";
-import { listCounts, listSections, moveList, smartCounts, UNGROUPED_SECTION_KEY } from "../lib/views";
+import {
+  isSmartViewVisible,
+  listCounts,
+  listSections,
+  moveList,
+  smartCounts,
+  UNGROUPED_SECTION_KEY,
+} from "../lib/views";
 import { splitLeadingEmoji } from "../lib/emoji";
-import { api } from "../lib/api";
 import { useStore } from "../store/useStore";
+import { useAvatar } from "./useAvatar";
 import {
   AllIcon,
   CalendarIcon,
@@ -81,7 +87,9 @@ export function Sidebar() {
   const query = useStore((s) => s.query);
   const setQuery = useStore((s) => s.setQuery);
   const setView = useStore((s) => s.setView);
+  const openSettings = useStore((s) => s.openSettings);
   const openDialog = useStore((s) => s.openDialog);
+  const confirmDelete = useStore((s) => s.confirmDelete);
   const sync = useStore((s) => s.sync);
   const addList = useStore((s) => s.addList);
   const renameList = useStore((s) => s.renameList);
@@ -91,7 +99,7 @@ export function Sidebar() {
   const deleteGroup = useStore((s) => s.deleteGroup);
   const toggleGroupCollapsed = useStore((s) => s.toggleGroupCollapsed);
   const reorganizeLists = useStore((s) => s.reorganizeLists);
-  const updateSettings = useStore((s) => s.updateSettings);
+  const { avatarUrl, pickAvatar: pickAvatarFile } = useAvatar();
 
   const allLists = useMemo(() => activeLists(db), [db]);
   const lists = useMemo(
@@ -157,56 +165,9 @@ export function Sidebar() {
     };
   }, [accountOpen]);
 
-  const avatar = db.settings.avatar;
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
-
-  useEffect(() => {
-    let alive = true;
-    setAvatarUrl(undefined);
-    if (!avatar?.relPath) return;
-    api
-      .attachmentRead(avatar.relPath)
-      .then((base64) => {
-        if (alive) {
-          setAvatarUrl(
-            `data:${avatar.mime || "image/png"};base64,${base64}`,
-          );
-        }
-      })
-      .catch(() => {
-        /* 文件缺失时回退到应用图标 */
-      });
-    return () => {
-      alive = false;
-    };
-  }, [avatar?.relPath, avatar?.mime]);
-
   const pickAvatar = async () => {
     setAccountOpen(false);
-    try {
-      const path = await open({
-        multiple: false,
-        directory: false,
-        filters: [
-          {
-            name: "图片",
-            extensions: ["png", "jpg", "jpeg", "webp", "gif", "bmp"],
-          },
-        ],
-      });
-      if (typeof path !== "string") return;
-      const info = await api.attachmentAdd(path);
-      updateSettings({
-        avatar: {
-          relPath: info.relPath,
-          mime: info.mime,
-          name: info.name,
-          size: info.size,
-        },
-      });
-    } catch {
-      /* 取消或读取失败 */
-    }
+    await pickAvatarFile();
   };
 
   const sensors = useSensors(
@@ -308,7 +269,15 @@ export function Sidebar() {
       active={view.type === "list" && view.id === list.id}
       groups={groups}
       onRename={(name) => renameList(list.id, name)}
-      onDelete={() => deleteList(list.id)}
+      onDelete={() =>
+        confirmDelete({
+          title: "删除列表",
+          message: `将删除列表“${list.name}”，其中的任务会保留并移至「任务」清单。`,
+          confirmLabel: "删除",
+          danger: true,
+          onConfirm: () => deleteList(list.id),
+        })
+      }
       onMoveToGroup={(groupId) => moveListToGroup(list.id, groupId)}
       onSelect={() => setView({ type: "list", id: list.id })}
     />
@@ -376,7 +345,7 @@ export function Sidebar() {
               role="menuitem"
               onClick={() => {
                 setAccountOpen(false);
-                openDialog("settings");
+                openSettings();
               }}
             >
               <SettingsIcon />
@@ -432,7 +401,9 @@ export function Sidebar() {
           ) : null}
         </div>
 
-        {SMART_ITEMS.map(({ id, label, Icon, color }) => {
+        {SMART_ITEMS.filter(({ id }) =>
+          isSmartViewVisible(db, id, counts, view),
+        ).map(({ id, label, Icon, color }) => {
           const active = view.type === "smart" && view.id === id;
           const count = counts[id];
           return (
@@ -487,7 +458,19 @@ export function Sidebar() {
                 onRenameHandled={() => setAutoRenameId(null)}
                 onToggle={() => toggleGroupCollapsed(group.id)}
                 onRename={(name) => renameGroup(group.id, name)}
-                onDelete={() => deleteGroup(group.id)}
+                onDelete={() => {
+                  if (groupLists.length === 0) {
+                    confirmDelete({
+                      title: "删除组",
+                      message: `将删除空分组“${group.name}”？`,
+                      confirmLabel: "删除",
+                      danger: true,
+                      onConfirm: () => deleteGroup(group.id),
+                    });
+                  } else {
+                    deleteGroup(group.id);
+                  }
+                }}
                 onAddList={() => addListToGroup(group.id)}
               >
                 <SortableContext

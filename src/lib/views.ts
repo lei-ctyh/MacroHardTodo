@@ -10,6 +10,7 @@ import {
   type Task,
   type TaskGroup,
   type TaskList,
+  type ToggleableSmartViewId,
 } from "./model";
 import { addDaysISO, dateToISO, isOverdue, isoToDate, todayISO } from "./dates";
 
@@ -78,6 +79,30 @@ function compareBySort(a: Task, b: Task, sort: SortKey): number {
   }
 }
 
+/** 判断任务是否属于「我的一天」：手动加入今天，或开启“今天截止自动显示”且今天到期 */
+export function isTaskInMyDay(
+  task: Task,
+  today = todayISO(),
+  includeDueToday = true,
+): boolean {
+  return task.myDay === today || (includeDueToday && task.dueDate === today);
+}
+
+/** 侧栏智能列表是否显示（兼顾逐项开关与“自动隐藏空列表”，当前激活视图保持可见） */
+export function isSmartViewVisible(
+  db: DB,
+  id: ToggleableSmartViewId,
+  counts: Record<SmartViewId, number>,
+  activeView?: View,
+): boolean {
+  if (db.settings.smartListVisibility?.[id] === false) return false;
+  if (db.settings.autoHideEmptySmartLists && (counts[id] ?? 0) === 0) {
+    if (activeView?.type === "smart" && activeView.id === id) return true;
+    return false;
+  }
+  return true;
+}
+
 export function tasksForView(db: DB, view: View): Task[] {
   const all = activeTasks(db);
   if (view.type === "list") {
@@ -86,10 +111,13 @@ export function tasksForView(db: DB, view: View): Task[] {
       .sort((a, b) => a.order - b.order);
   }
   switch (view.id) {
-    case "myday":
+    case "myday": {
+      const today = todayISO();
+      const includeDueToday = db.settings.showDueTodayInMyDay ?? true;
       return all
-        .filter((t) => !t.completed && t.myDay === todayISO())
+        .filter((t) => !t.completed && isTaskInMyDay(t, today, includeDueToday))
         .sort((a, b) => a.order - b.order);
+    }
     case "important":
       return all
         .filter((t) => !t.completed && t.importance === "high")
@@ -273,10 +301,13 @@ export function completedTasksForView(db: DB, view: View): Task[] {
       .sort(byCompletedAtDesc);
   }
   switch (view.id) {
-    case "myday":
+    case "myday": {
+      const today = todayISO();
+      const includeDueToday = db.settings.showDueTodayInMyDay ?? true;
       return all
-        .filter((t) => t.completed && t.myDay === todayISO())
+        .filter((t) => t.completed && isTaskInMyDay(t, today, includeDueToday))
         .sort(byCompletedAtDesc);
+    }
     case "important":
       return all
         .filter((t) => t.completed && t.importance === "high")
@@ -291,8 +322,11 @@ export function completedTasksForView(db: DB, view: View): Task[] {
 
 export function smartCounts(db: DB): Record<SmartViewId, number> {
   const all = activeTasks(db);
+  const today = todayISO();
+  const includeDueToday = db.settings.showDueTodayInMyDay ?? true;
   return {
-    myday: all.filter((t) => !t.completed && t.myDay === todayISO()).length,
+    myday: all.filter((t) => !t.completed && isTaskInMyDay(t, today, includeDueToday))
+      .length,
     important: all.filter((t) => !t.completed && t.importance === "high").length,
     planned: all.filter((t) => !t.completed && (t.dueDate || t.reminderAt)).length,
     all: all.filter((t) => !t.completed).length,
@@ -386,11 +420,12 @@ export function moveList(
 /** 我的一天建议：昨天未完成 + 今天到期，排除已在 My Day 中的任务 */
 export function myDaySuggestions(db: DB): Task[] {
   const today = todayISO();
+  const includeDueToday = db.settings.showDueTodayInMyDay ?? true;
   return activeTasks(db)
     .filter(
       (t) =>
         !t.completed &&
-        t.myDay !== today &&
+        !isTaskInMyDay(t, today, includeDueToday) &&
         (t.dueDate === today || isOverdue(t.dueDate, t.dueTime)),
     )
     .sort((a, b) => compareDueDate(a, b) || a.order - b.order);
@@ -433,7 +468,10 @@ export interface SuggestionGroup {
 /** 「我的一天」右侧建议：按逾期、今天、稍后、最近添加、其他分组 */
 export function myDaySuggestionGroups(db: DB): SuggestionGroup[] {
   const today = todayISO();
-  const all = activeTasks(db).filter((t) => !t.completed && t.myDay !== today);
+  const includeDueToday = db.settings.showDueTodayInMyDay ?? true;
+  const all = activeTasks(db).filter(
+    (t) => !t.completed && !isTaskInMyDay(t, today, includeDueToday),
+  );
   const used = new Set<string>();
 
   const take = (pred: (t: Task) => boolean, limit = 30): Task[] => {

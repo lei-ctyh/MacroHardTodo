@@ -4,6 +4,7 @@ import { zhCN } from "react-day-picker/locale/zh-CN";
 import "react-day-picker/style.css";
 import { ChevronDownIcon, ChevronUpIcon } from "./icons";
 import { dateToISO } from "../lib/dates";
+import { useStore } from "../store/useStore";
 
 function parseISO(iso?: string): Date | undefined {
   if (!iso) return undefined;
@@ -114,6 +115,7 @@ export function DateTimePicker({
   onCancel: () => void;
   onSave: (date: string, time: string) => void;
 }) {
+  const weekStartsOn = useStore((s) => s.db.settings.weekStartsOn ?? 1);
   const initial = parseISO(initialDate) ?? new Date();
   const [selected, setSelected] = useState<Date>(initial);
   const [hours, setHours] = useState(() => {
@@ -169,7 +171,7 @@ export function DateTimePicker({
         defaultMonth={initial}
         startMonth={new Date(1900, 0, 1)}
         endMonth={new Date(2100, 11, 31)}
-        weekStartsOn={1}
+        weekStartsOn={weekStartsOn}
         showOutsideDays
         fixedWeeks
         captionLayout="dropdown"

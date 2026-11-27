@@ -27,12 +27,21 @@ import { mergeDB } from "../lib/merge";
 import { doSync, resolveDataUrl, type SyncConfig } from "../lib/syncClient";
 import { defaultCollapsedSections, type View } from "../lib/views";
 import { todayISO } from "../lib/dates";
+import { playCompletionChime } from "../lib/sound";
 
 const LS_KEY = "macrohard-todo-db";
 const DEVICE_KEY = "mht-device-id";
 const UPLOADED_KEY = "mht-uploaded-attachments";
 
-export type DialogKind = "settings" | "sync" | "migration" | null;
+export type DialogKind = "sync" | "migration" | null;
+
+export interface ConfirmRequest {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  danger?: boolean;
+  onConfirm: () => void;
+}
 
 interface SyncStatus {
   running: boolean;
@@ -49,7 +58,9 @@ export interface StoreState {
   saving: "idle" | "saving" | "saved" | "error";
   saveError: string | null;
   sync: SyncStatus;
+  settingsOpen: boolean;
   dialog: DialogKind;
+  confirm: ConfirmRequest | null;
   quickAddNonce: number;
   loadWarning: string | null;
 
@@ -57,7 +68,11 @@ export interface StoreState {
   setView: (view: View) => void;
   selectTask: (id: string | null) => void;
   setQuery: (q: string) => void;
+  openSettings: () => void;
+  closeSettings: () => void;
   openDialog: (dialog: DialogKind) => void;
+  confirmDelete: (req: ConfirmRequest) => void;
+  closeConfirm: () => void;
   focusQuickAdd: () => void;
 
   addList: (name: string, groupId?: string) => string | null;
@@ -112,8 +127,17 @@ export interface StoreState {
   replaceDb: (db: DB) => void;
 }
 
-function normalizeDb(raw: Partial<DB>): DB {
+export function normalizeDb(raw: Partial<DB>): DB {
   const deviceId = raw.deviceId || newDeviceId();
+  const mergedSettings: Settings = {
+    ...DEFAULT_SETTINGS,
+    ...(raw.settings ?? {}),
+    weekStartsOn: raw.settings?.weekStartsOn === 0 ? 0 : 1,
+    smartListVisibility: {
+      ...DEFAULT_SETTINGS.smartListVisibility,
+      ...(raw.settings?.smartListVisibility ?? {}),
+    },
+  };
   return ensureDefaultList({
     schemaVersion: 1,
     deviceId,
@@ -127,7 +151,7 @@ function normalizeDb(raw: Partial<DB>): DB {
         }))
       : [],
     shared: raw.shared && typeof raw.shared === "object" ? raw.shared : {},
-    settings: { ...DEFAULT_SETTINGS, ...(raw.settings ?? {}) },
+    settings: mergedSettings,
   });
 }
 
@@ -193,7 +217,9 @@ export const useStore = create<StoreState>((set, get) => {
     saving: "idle",
     saveError: null,
     sync: { running: false, message: null, error: null },
+    settingsOpen: false,
     dialog: null,
+    confirm: null,
     quickAddNonce: 0,
     loadWarning: null,
 
@@ -262,8 +288,19 @@ export const useStore = create<StoreState>((set, get) => {
     setView: (view) => set({ view, selectedTaskId: null, query: "" }),
     selectTask: (id) => set({ selectedTaskId: id }),
     setQuery: (q) => set({ query: q }),
+    openSettings: () => set({ settingsOpen: true, selectedTaskId: null }),
+    closeSettings: () => set({ settingsOpen: false }),
     openDialog: (dialog) => set({ dialog }),
-    focusQuickAdd: () => set((s) => ({ quickAddNonce: s.quickAddNonce + 1 })),
+    confirmDelete: (req) => {
+      if (!get().db.settings.confirmBeforeDelete) {
+        req.onConfirm();
+        return;
+      }
+      set({ confirm: req });
+    },
+    closeConfirm: () => set({ confirm: null }),
+    focusQuickAdd: () =>
+      set((s) => ({ settingsOpen: false, quickAddNonce: s.quickAddNonce + 1 })),
 
     addList: (name, groupId) => {
       const trimmed = name.trim();
@@ -481,8 +518,15 @@ export const useStore = create<StoreState>((set, get) => {
       if (!trimmed) return null;
       const db = get().db;
       if (!db.lists.some((l) => l.id === listId && !l.deletedAt)) return null;
+      const existingOrders = activeTasks(db)
+        .filter((t) => t.listId === listId)
+        .map((t) => t.order);
       const order =
-        Math.max(-1, ...activeTasks(db).filter((t) => t.listId === listId).map((t) => t.order)) + 1;
+        existingOrders.length === 0
+          ? 0
+          : db.settings.addTasksOnTop
+            ? Math.min(...existingOrders) - 1
+            : Math.max(...existingOrders) + 1;
       const task = createTask(db.deviceId, {
         listId,
         title: trimmed,
@@ -530,6 +574,9 @@ export const useStore = create<StoreState>((set, get) => {
             ...(nextTask ? [nextTask] : []),
           ],
         }));
+        if (db.settings.playCompletionSound) {
+          playCompletionChime();
+        }
       } else {
         commit((d) => ({
           ...d,
@@ -632,11 +679,34 @@ export const useStore = create<StoreState>((set, get) => {
     },
 
     toggleImportance: (id) => {
-      updateTaskWith(id, (t, deviceId) => ({
-        ...t,
-        importance: t.importance === "high" ? "normal" : "high",
-        ...touch(deviceId),
-      }));
+      commit((db) => {
+        const target = db.tasks.find((t) => t.id === id && !t.deletedAt);
+        if (!target) return db;
+        const nextImportance = target.importance === "high" ? "normal" : "high";
+        let nextOrder = target.order;
+        if (nextImportance === "high" && db.settings.moveStarredToTop) {
+          const siblingOrders = activeTasks(db)
+            .filter((t) => t.listId === target.listId && t.id !== target.id)
+            .map((t) => t.order);
+          if (siblingOrders.length > 0) {
+            const minOrder = Math.min(...siblingOrders);
+            if (nextOrder >= minOrder) nextOrder = minOrder - 1;
+          }
+        }
+        return {
+          ...db,
+          tasks: db.tasks.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  importance: nextImportance,
+                  order: nextOrder,
+                  ...touch(db.deviceId),
+                }
+              : t,
+          ),
+        };
+      });
     },
 
     setMyDay: (id, date) => {
