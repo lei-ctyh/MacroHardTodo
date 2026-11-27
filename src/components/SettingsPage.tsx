@@ -10,6 +10,8 @@ import {
   AllIcon,
   BackIcon,
   CalendarIcon,
+  ChevronRightIcon,
+  ClockIcon,
   CloseIcon,
   CloudIcon,
   CompletedIcon,
@@ -22,7 +24,6 @@ import {
   SparklesIcon,
   StarFilledIcon,
   StarOutlineIcon,
-  SyncIcon,
   UploadIcon,
 } from "./icons";
 
@@ -461,140 +462,191 @@ export function SettingsPage() {
           </section>
 
           <section className="settings-section">
-            <h2>同步与迁移</h2>
-            <div className="settings-sync-block">
-              <div className="settings-sync-status">
-                <CloudIcon size={16} strokeWidth={1.6} />
-                <span>{syncSummary}</span>
+            <h2>同步与数据</h2>
+            <div className="settings-action-list">
+              <div
+                className="settings-action-row clickable"
+                role="button"
+                tabIndex={0}
+                onClick={() => openDialog("sync")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    openDialog("sync");
+                  }
+                }}
+              >
+                <span className="settings-action-icon">
+                  <CloudIcon size={16} strokeWidth={1.5} />
+                </span>
+                <span className="settings-action-label">WebDAV 同步</span>
+                <span className="settings-action-trail">
+                  <span
+                    className={`settings-action-status ${sync.error ? "error" : ""}`}
+                  >
+                    {syncSummary}
+                  </span>
+                  {hasWebdav ? (
+                    <button
+                      type="button"
+                      className="settings-chip-btn primary"
+                      disabled={sync.running}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void syncNow();
+                      }}
+                    >
+                      {sync.running ? "同步中" : "同步"}
+                    </button>
+                  ) : null}
+                  <ChevronRightIcon
+                    size={16}
+                    strokeWidth={1.5}
+                    className="settings-action-chevron"
+                  />
+                </span>
               </div>
-              <div className="settings-btn-row">
-                <button
-                  type="button"
-                  className="btn primary"
-                  disabled={sync.running}
-                  onClick={() => {
-                    if (hasWebdav) void syncNow();
-                    else openDialog("sync");
-                  }}
-                >
-                  <SyncIcon size={14} />
-                  {sync.running ? "同步中…" : "同步"}
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => openDialog("sync")}
-                >
-                  WebDAV 配置
-                </button>
-              </div>
-            </div>
-            <div className="settings-inline-action">
-              <RefreshIcon size={16} strokeWidth={1.6} />
-              <div className="grow">
-                <div className="settings-item-label">从微软 To Do 迁移</div>
-              </div>
+
               <button
                 type="button"
-                className="btn small"
+                className="settings-action-row clickable"
                 onClick={() => openDialog("migration")}
               >
-                开始迁移
+                <span className="settings-action-icon">
+                  <RefreshIcon size={16} strokeWidth={1.5} />
+                </span>
+                <span className="settings-action-label">从微软 To Do 迁移</span>
+                <span className="settings-action-trail">
+                  <ChevronRightIcon
+                    size={16}
+                    strokeWidth={1.5}
+                    className="settings-action-chevron"
+                  />
+                </span>
               </button>
-            </div>
-          </section>
 
-          <section className="settings-section">
-            <h2>数据</h2>
-            <div className="settings-inline-action">
-              <FolderIcon size={16} strokeWidth={1.6} />
-              <div className="grow">
-                <div className="settings-item-label">数据目录</div>
-                <div className="settings-item-path mono">
-                  {dataDirStatus.state === "loading"
-                    ? "读取中…"
-                    : dataDirStatus.state === "ready"
-                      ? dataDirStatus.path
-                      : "浏览器本地存储"}
-                </div>
+              <div className="settings-action-row">
+                <span className="settings-action-icon">
+                  <DownloadIcon size={16} strokeWidth={1.5} />
+                </span>
+                <span className="settings-action-label">导出数据</span>
+                <span className="settings-action-trail">
+                  <button
+                    type="button"
+                    className="settings-chip-btn"
+                    disabled={busy !== null}
+                    onClick={() => void doExportJson()}
+                  >
+                    JSON
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-chip-btn"
+                    disabled={busy !== null}
+                    onClick={() => void doExportCsv()}
+                  >
+                    CSV
+                  </button>
+                </span>
               </div>
+
+              <div className="settings-action-row">
+                <span className="settings-action-icon">
+                  <UploadIcon size={16} strokeWidth={1.5} />
+                </span>
+                <span className="settings-action-label">导入数据</span>
+                <span className="settings-action-trail">
+                  <button
+                    type="button"
+                    className="settings-chip-btn"
+                    disabled={busy !== null}
+                    onClick={() => void doImportJson()}
+                  >
+                    JSON
+                  </button>
+                  <button
+                    type="button"
+                    className="settings-chip-btn"
+                    disabled={busy !== null}
+                    onClick={() => void doImportCsv()}
+                  >
+                    CSV
+                  </button>
+                </span>
+              </div>
+
+              <div className="settings-action-row">
+                <span className="settings-action-icon">
+                  <ClockIcon size={16} strokeWidth={1.5} />
+                </span>
+                <label
+                  className="settings-action-label"
+                  htmlFor="purge-days-select"
+                >
+                  自动清理已完成任务
+                </label>
+                <span className="settings-action-trail">
+                  <select
+                    id="purge-days-select"
+                    className="settings-inline-select"
+                    value={settings.autoPurgeCompletedDays}
+                    onChange={(e) =>
+                      updateSettings({
+                        autoPurgeCompletedDays: Math.max(
+                          0,
+                          Number(e.target.value) || 0,
+                        ),
+                      })
+                    }
+                  >
+                    {purgeOptions.map((days) => (
+                      <option key={days} value={days}>
+                        {days === 0 ? "关闭" : `${days} 天后`}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </div>
+
               {dataDirStatus.state === "ready" ? (
                 <button
                   type="button"
-                  className="btn small"
+                  className="settings-action-row clickable"
+                  title={dataDirStatus.path}
                   onClick={() => void copyDataDir()}
                 >
-                  <CopyIcon size={13} />
-                  {copiedPath ? "已复制" : "复制路径"}
+                  <span className="settings-action-icon">
+                    <FolderIcon size={16} strokeWidth={1.5} />
+                  </span>
+                  <span className="settings-action-label">数据目录</span>
+                  <span className="settings-action-trail">
+                    <span className="settings-action-path mono">
+                      {copiedPath ? "已复制路径" : dataDirStatus.path}
+                    </span>
+                    <CopyIcon
+                      size={14}
+                      strokeWidth={1.5}
+                      className="settings-action-chevron"
+                    />
+                  </span>
                 </button>
+              ) : dataDirStatus.state === "unavailable" ? (
+                <div className="settings-action-row">
+                  <span className="settings-action-icon">
+                    <FolderIcon size={16} strokeWidth={1.5} />
+                  </span>
+                  <span className="settings-action-label">数据目录</span>
+                  <span className="settings-action-trail">
+                    <span className="settings-action-status">浏览器本地存储</span>
+                  </span>
+                </div>
               ) : null}
-            </div>
-            <div className="settings-inline-action">
-              <label
-                className="settings-item-label grow"
-                htmlFor="purge-days-select"
-              >
-                自动清理已完成任务
-              </label>
-              <select
-                id="purge-days-select"
-                className="settings-select inline"
-                value={settings.autoPurgeCompletedDays}
-                onChange={(e) =>
-                  updateSettings({
-                    autoPurgeCompletedDays: Math.max(
-                      0,
-                      Number(e.target.value) || 0,
-                    ),
-                  })
-                }
-              >
-                {purgeOptions.map((days) => (
-                  <option key={days} value={days}>
-                    {days === 0 ? "关闭" : `${days} 天后`}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="settings-btn-row">
-              <button
-                type="button"
-                className="btn small"
-                disabled={busy !== null}
-                onClick={() => void doExportJson()}
-              >
-                <DownloadIcon size={14} /> 导出 JSON
-              </button>
-              <button
-                type="button"
-                className="btn small"
-                disabled={busy !== null}
-                onClick={() => void doImportJson()}
-              >
-                <UploadIcon size={14} /> 导入 JSON
-              </button>
-              <button
-                type="button"
-                className="btn small"
-                disabled={busy !== null}
-                onClick={() => void doExportCsv()}
-              >
-                <DownloadIcon size={14} /> 导出 CSV
-              </button>
-              <button
-                type="button"
-                className="btn small"
-                disabled={busy !== null}
-                onClick={() => void doImportCsv()}
-              >
-                <UploadIcon size={14} /> 导入 CSV
-              </button>
             </div>
           </section>
 
           <section className="settings-section settings-about">
             <h2>关于</h2>
-            <div className="settings-about-card">
+            <div className="settings-card">
               <div className="settings-about-head">
                 <div className="settings-about-logo">
                   <img src="/logo.png" alt="" />
@@ -607,15 +659,15 @@ export function SettingsPage() {
                 </div>
                 <button
                   type="button"
-                  className="btn settings-about-check-btn"
+                  className="btn small settings-about-check-btn"
                   onClick={() => void openExternal(RELEASES_URL)}
                 >
-                  <RefreshIcon size={14} />
+                  <RefreshIcon size={13} />
                   <span>检查更新</span>
                 </button>
               </div>
 
-              <div className="settings-about-actions">
+              <div className="settings-card-actions">
                 <button
                   type="button"
                   className="btn small"
