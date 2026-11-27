@@ -1,4 +1,3 @@
-import { addMonths, addYears } from "date-fns";
 import { createStep, nowMs, uid, type RecurrenceRule, type Task } from "./model";
 import { dateToISO, daysBetweenISO, isoToDate, todayISO } from "./dates";
 
@@ -41,11 +40,28 @@ export function nextOccurrence(currentISO: string, rule: RecurrenceRule): string
       break;
     }
     case "monthly": {
-      next = addMonths(start, interval);
+      const day = rule.anchorDay ?? start.getDate();
+      const target = new Date(start.getFullYear(), start.getMonth() + interval, 1);
+      const lastDay = new Date(
+        target.getFullYear(),
+        target.getMonth() + 1,
+        0,
+      ).getDate();
+      target.setDate(Math.min(day, lastDay));
+      next = target;
       break;
     }
     case "yearly": {
-      next = addYears(start, interval);
+      const month = rule.anchorMonth ?? start.getMonth();
+      const day = rule.anchorDay ?? start.getDate();
+      const target = new Date(start.getFullYear() + interval, month, 1);
+      const lastDay = new Date(
+        target.getFullYear(),
+        target.getMonth() + 1,
+        0,
+      ).getDate();
+      target.setDate(Math.min(day, lastDay));
+      next = target;
       break;
     }
   }
@@ -54,6 +70,22 @@ export function nextOccurrence(currentISO: string, rule: RecurrenceRule): string
   const nextISO = dateToISO(next);
   if (rule.endDate && nextISO > rule.endDate) return null;
   return nextISO;
+}
+
+/** 从 currentISO 起按规则向后找第一个 >= minISO 的日期；用于逾期任务的「跳转到当前任务」 */
+export function nextOccurrenceOnOrAfter(
+  currentISO: string,
+  rule: RecurrenceRule,
+  minISO: string,
+): string | null {
+  let cursor = currentISO;
+  for (let index = 0; index < 10000; index += 1) {
+    const next = nextOccurrence(cursor, rule);
+    if (!next) return null;
+    if (next >= minISO) return next;
+    cursor = next;
+  }
+  return null;
 }
 
 /** 完成一个重复任务时，生成下一次实例（不修改原任务） */
@@ -121,6 +153,14 @@ export function describeRecurrence(rule: RecurrenceRule): string {
           ? "个月"
           : "年";
   const every = interval === 1 ? `每${unit}` : `每 ${interval} ${unit}`;
+  if (
+    rule.freq === "weekly" &&
+    interval === 1 &&
+    rule.byWeekday?.length === 5 &&
+    [1, 2, 3, 4, 5].every((day) => rule.byWeekday!.includes(day))
+  ) {
+    return "工作日";
+  }
   if (rule.freq === "weekly" && rule.byWeekday?.length) {
     const days = rule.byWeekday.map((d) => `周${WEEKDAY_NAMES[d]}`).join("、");
     return `${every} ${days}`;

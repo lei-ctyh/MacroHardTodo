@@ -7,12 +7,14 @@ export function Modal({
   children,
   footer,
   wide,
+  narrow,
 }: {
   title: ReactNode;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
   wide?: boolean;
+  narrow?: boolean;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -29,7 +31,11 @@ export function Modal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className={wide ? "modal wide" : "modal"} role="dialog" aria-modal="true">
+      <div
+        className={wide ? "modal wide" : narrow ? "modal narrow" : "modal"}
+        role="dialog"
+        aria-modal="true"
+      >
         <div className="modal-head">
           <div className="modal-title">{title}</div>
           <button className="icon-btn" onClick={onClose} aria-label="关闭">

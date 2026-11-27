@@ -50,6 +50,16 @@ export function dueLabel(dueDate?: string, dueTime?: string): string {
   return dueTime ? `${base} ${dueTime}` : base;
 }
 
+/** 日期的口语标签：今天 / 明天 / 昨天 / 11月29日, 周日 */
+export function dayLabel(iso: string): string {
+  const today = todayISO();
+  if (iso === today) return "今天";
+  if (iso === dateToISO(new Date(Date.now() + 86400000))) return "明天";
+  if (iso === dateToISO(new Date(Date.now() - 86400000))) return "昨天";
+  const d = isoToDate(iso);
+  return `${d.getMonth() + 1}月${d.getDate()}日, 周${weekdayCN(d)}`;
+}
+
 export function reminderLabel(ts?: number): string {
   if (!ts) return "";
   const d = new Date(ts);

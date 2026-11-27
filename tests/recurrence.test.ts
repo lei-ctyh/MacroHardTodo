@@ -3,6 +3,7 @@ import {
   buildNextTask,
   describeRecurrence,
   nextOccurrence,
+  nextOccurrenceOnOrAfter,
 } from "../src/lib/recurrence";
 import type { Task } from "../src/lib/model";
 
@@ -69,16 +70,52 @@ describe("nextOccurrence", () => {
     ).toBe("2026-12-07");
   });
 
-  it("每月 31 日会收敛到月末", () => {
-    expect(nextOccurrence("2026-01-31", { freq: "monthly", interval: 1 })).toBe(
-      "2026-02-28",
-    );
+  it("每月 31 日会保留原始日号，遇到短月取月末", () => {
+    expect(
+      nextOccurrence("2026-01-31", {
+        freq: "monthly",
+        interval: 1,
+        anchorDay: 31,
+      }),
+    ).toBe("2026-02-28");
+    expect(
+      nextOccurrence("2026-02-28", {
+        freq: "monthly",
+        interval: 1,
+        anchorDay: 31,
+      }),
+    ).toBe("2026-03-31");
+  });
+
+  it("每年 2 月 29 日在平年落到 2 月 28 日，闰年回到 29 日", () => {
+    const rule = { freq: "yearly" as const, interval: 1, anchorMonth: 1, anchorDay: 29 };
+    expect(nextOccurrence("2028-02-29", rule)).toBe("2029-02-28");
+    expect(nextOccurrence("2029-02-28", rule)).toBe("2030-02-28");
+    expect(nextOccurrence("2031-02-28", rule)).toBe("2032-02-29");
   });
 
   it("每年", () => {
     expect(nextOccurrence("2026-11-23", { freq: "yearly", interval: 1 })).toBe(
       "2027-11-23",
     );
+  });
+
+  it("逾期补齐到今天或之后", () => {
+    expect(
+      nextOccurrenceOnOrAfter(
+        "2026-11-08",
+        { freq: "daily", interval: 1 },
+        "2026-11-26",
+      ),
+    ).toBe("2026-11-26");
+    // 2026-11-26 是周四，每周日的任务下一次是 11/29
+    expect(
+      nextOccurrenceOnOrAfter(
+        "2026-11-01",
+        { freq: "weekly", interval: 1, byWeekday: [0] },
+        "2026-11-26",
+      ),
+    ).toBe("2026-11-29");
   });
 
   it("超过结束日期则停止", () => {

@@ -37,6 +37,10 @@ export interface RecurrenceRule {
   interval: number;
   /** 0 = 周日 … 6 = 周六 */
   byWeekday?: number[];
+  /** 每月/每年保留的原始日号（1-31）；未设置时沿用当前实例的日 */
+  anchorDay?: number;
+  /** 每年保留的原始月份（0-11） */
+  anchorMonth?: number;
   /** YYYY-MM-DD，最后一天 */
   endDate?: string;
   /** 总发生次数（含首次） */

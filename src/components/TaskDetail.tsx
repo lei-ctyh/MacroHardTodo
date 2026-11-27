@@ -1,42 +1,49 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { api } from "../lib/api";
 import { useStore } from "../store/useStore";
 import {
   activeLists,
   type RecurrenceRule,
+  type Task,
 } from "../lib/model";
+import { smartTheme, themeAccent } from "../lib/themes";
+import { DateTimePicker } from "./DateTimePicker";
+import { RepeatDialog } from "./RepeatDialog";
 import {
-  dueLabel,
-  reminderLabel,
+  dateToISO,
+  dayLabel,
+  daysBetweenISO,
+  isOverdue,
   todayISO,
 } from "../lib/dates";
-import { describeRecurrence, WEEKDAY_NAMES } from "../lib/recurrence";
+import {
+  describeRecurrence,
+  nextOccurrenceOnOrAfter,
+} from "../lib/recurrence";
 import {
   AttachIcon,
   BellIcon,
+  CalendarArrowUpIcon,
+  CalendarCheckIcon,
+  CalendarDaysIcon,
   CalendarIcon,
+  CalendarRangeIcon,
   CheckIcon,
   CheckSmallIcon,
+  ChevronsRightIcon,
+  ClockIcon,
   CloseIcon,
   CopyIcon,
-  FolderIcon,
+  ArrowRightIcon,
   PlusIcon,
   RepeatIcon,
+  SparklesIcon,
   StarFilledIcon,
   StarOutlineIcon,
   SunIcon,
   TrashIcon,
 } from "./icons";
-
-function toLocalInput(ts?: number): string {
-  if (!ts) return "";
-  const d = new Date(ts);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
-}
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -44,8 +51,53 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function createdAtLabel(ts: number): string {
+  const diff = Date.now() - ts;
+  if (diff < 60_000) return "刚刚";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
+  const date = new Date(ts);
+  const today = new Date();
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOfDay(today) - startOfDay(date)) / 86400000);
+  if (days === 0 && diff < 86_400_000) {
+    return `${Math.floor(diff / 3_600_000)} 小时前`;
+  }
+  if (days === 1) return "昨天";
+  return date.toLocaleDateString("zh-CN");
+}
+
+/** 日期的口语标签：今天 / 明天 / 昨天 / 11月29日, 周日 */
+
+function tomorrowDate(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d;
+}
+
+function nextMondayDate(): Date {
+  const d = new Date();
+  const delta = ((8 - d.getDay()) % 7) || 7;
+  d.setDate(d.getDate() + delta);
+  return d;
+}
+
+function weekdayLabel(d: Date): string {
+  return `周${"日一二三四五六"[d.getDay()]}`;
+}
+
+function timeLabel(hours: number, minutes = 0): string {
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function clockLabel(ts: number): string {
+  const d = new Date(ts);
+  return timeLabel(d.getHours(), d.getMinutes());
+}
+
 export function TaskDetail() {
   const db = useStore((s) => s.db);
+  const view = useStore((s) => s.view);
   const selectedId = useStore((s) => s.selectedTaskId);
   const selectTask = useStore((s) => s.selectTask);
   const updateTask = useStore((s) => s.updateTask);
@@ -65,16 +117,40 @@ export function TaskDetail() {
 
   const task = db.tasks.find((t) => t.id === selectedId && !t.deletedAt);
 
-  const [editor, setEditor] = useState<"due" | "reminder" | "repeat" | null>(null);
+  const [menu, setMenu] = useState<"due" | "reminder" | "repeat" | null>(null);
+  const [picker, setPicker] = useState<"due" | "reminder" | null>(null);
+  const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
   const [stepTitle, setStepTitle] = useState("");
   const [tagInput, setTagInput] = useState("");
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setEditor(null);
+    setMenu(null);
+    setPicker(null);
+    setRepeatDialogOpen(false);
     setStepTitle("");
     setTagInput("");
   }, [selectedId]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const onPointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target)) return;
+      if ((target as HTMLElement).closest?.(".detail-row-wrap")) return;
+      setMenu(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenu(null);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menu]);
 
   useEffect(() => {
     const el = titleRef.current;
@@ -84,6 +160,18 @@ export function TaskDetail() {
   }, [task?.title, selectedId]);
 
   if (!task) return null;
+
+  const viewTheme =
+    view.type === "list"
+      ? db.lists.find((l) => l.id === view.id && !l.deletedAt)?.theme
+      : smartTheme(db, view.id);
+  const accent = themeAccent(viewTheme);
+  const accentStyle = accent
+    ? ({
+        "--theme-accent": accent.base,
+        "--theme-accent-hover": accent.hover,
+      } as CSSProperties)
+    : undefined;
 
   const steps = task.steps.filter((s) => !s.deletedAt).sort((a, b) => a.order - b.order);
   const attachments = (task.attachments ?? []).filter((a) => !a.deletedAt);
@@ -95,11 +183,73 @@ export function TaskDetail() {
       recurrence: rule
         ? { ...rule, occurrenceIndex: rule.occurrenceIndex ?? 1 }
         : undefined,
+      // 没有截止日期时设置重复：默认用今天作为锚点
+      ...(rule && !task.dueDate ? { dueDate: todayISO() } : {}),
     });
   };
 
-  const ensureRule = (): RecurrenceRule =>
-    task.recurrence ?? { freq: "daily", interval: 1, occurrenceIndex: 1 };
+  /** 每月/每年把原始日号（和月份）记进规则，避免遇到短月后日期漂移 */
+  const withRecurrenceAnchor = (rule: RecurrenceRule): RecurrenceRule => {
+    if (rule.freq !== "monthly" && rule.freq !== "yearly") return rule;
+    const base = task.dueDate
+      ? new Date(`${task.dueDate}T00:00:00`)
+      : new Date();
+    return {
+      ...rule,
+      anchorDay: base.getDate(),
+      anchorMonth: rule.freq === "yearly" ? base.getMonth() : undefined,
+    };
+  };
+
+  const applyDue = (d: Date) => {
+    updateTask(task.id, { dueDate: dateToISO(d), dueTime: undefined });
+    setMenu(null);
+  };
+
+  const applyReminder = (d: Date) => {
+    updateTask(task.id, { reminderAt: d.getTime() });
+    setMenu(null);
+  };
+
+  const applyRepeat = (rule: RecurrenceRule) => {
+    setRecurrence(withRecurrenceAnchor(rule));
+    setMenu(null);
+  };
+
+  const overdueRecurring = Boolean(
+    !task.completed &&
+      task.recurrence &&
+      task.dueDate &&
+      task.dueDate < todayISO(),
+  );
+
+  const jumpToCurrent = () => {
+    if (!task.recurrence || !task.dueDate) return;
+    const next = nextOccurrenceOnOrAfter(
+      task.dueDate,
+      task.recurrence,
+      todayISO(),
+    );
+    if (!next) return;
+    const patch: Partial<Task> = {
+      dueDate: next,
+      occurrenceKey: `${task.seriesId ?? task.id}:${next}`,
+    };
+    if (task.reminderAt) {
+      const reminder = new Date(task.reminderAt);
+      const offset = daysBetweenISO(task.dueDate, dateToISO(reminder));
+      const shifted = new Date(`${next}T00:00:00`);
+      shifted.setDate(shifted.getDate() + offset);
+      shifted.setHours(reminder.getHours(), reminder.getMinutes(), 0, 0);
+      patch.reminderAt = shifted.getTime();
+    }
+    updateTask(task.id, patch);
+  };
+
+  const openPicker = (which: "due" | "reminder") => {
+    setMenu(null);
+    setPicker(which);
+  };
 
   const addTag = () => {
     const trimmed = tagInput.trim();
@@ -110,65 +260,47 @@ export function TaskDetail() {
   };
 
   return (
-    <section className="detail-panel">
-      <div className="detail-head">
-        <button
-          className={`icon-btn ${task.importance === "high" ? "active" : ""}`}
-          onClick={() => toggleImportance(task.id)}
-          title="标记重要"
-          style={task.importance === "high" ? { color: "var(--star)" } : undefined}
-        >
-          {task.importance === "high" ? <StarFilledIcon /> : <StarOutlineIcon />}
-        </button>
-        <div style={{ flex: 1 }} />
-        <button
-          className="icon-btn"
-          onClick={() => duplicateTask(task.id)}
-          title="创建副本"
-        >
-          <CopyIcon />
-        </button>
-        <button
-          className="icon-btn"
-          onClick={() => deleteTask(task.id)}
-          title="删除任务"
-        >
-          <TrashIcon />
-        </button>
-        <button
-          className="icon-btn"
-          onClick={() => selectTask(null)}
-          title="关闭"
-        >
-          <CloseIcon />
-        </button>
-      </div>
-
+    <>
+    <section className="detail-panel" style={accentStyle}>
       <div className="detail-scroll">
-        <div className="detail-title-row">
-          <button
-            className={`detail-checkbox ${task.completed ? "checked" : ""}`}
-            onClick={() => toggleComplete(task.id)}
-            aria-label="完成"
-          >
-            <CheckIcon />
-          </button>
-          <textarea
-            ref={titleRef}
-            className={`detail-title ${task.completed ? "completed" : ""}`}
-            rows={1}
-            value={task.title}
-            onChange={(e) => updateTask(task.id, { title: e.target.value })}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                e.currentTarget.blur();
-              }
-            }}
-          />
-        </div>
+        <div className="detail-card detail-title-card">
+          <div className="detail-title-row">
+            <button
+              className={`detail-checkbox ${task.completed ? "checked" : ""}`}
+              onClick={() => toggleComplete(task.id)}
+              aria-label="完成"
+            >
+              <CheckIcon />
+            </button>
+            <textarea
+              ref={titleRef}
+              className={`detail-title ${task.completed ? "completed" : ""}`}
+              rows={1}
+              value={task.title}
+              onChange={(e) => updateTask(task.id, { title: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.currentTarget.blur();
+                }
+              }}
+            />
+            <button
+              className={`icon-btn detail-star ${
+                task.importance === "high" ? "on" : ""
+              }`}
+              onClick={() => toggleImportance(task.id)}
+              title="标记重要"
+              aria-label="标记重要"
+            >
+              {task.importance === "high" ? (
+                <StarFilledIcon />
+              ) : (
+                <StarOutlineIcon />
+              )}
+            </button>
+          </div>
 
-        <div className="detail-block">
           <div className="steps-list">
             {steps.map((step) => (
               <div key={step.id} className="step-row">
@@ -215,321 +347,337 @@ export function TaskDetail() {
         <div className="detail-block">
           <button
             className="detail-row"
-            onClick={() => setEditor(editor === "due" ? null : "due")}
-          >
-            <span className="row-icon">
-              <CalendarIcon />
-            </span>
-            <span className={`row-value ${task.dueDate ? "" : "muted"}`}>
-              {task.dueDate ? dueLabel(task.dueDate, task.dueTime) : "添加截止日期"}
-            </span>
-            {task.dueDate ? (
-              <span
-                className="clear-btn"
-                role="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateTask(task.id, { dueDate: undefined, dueTime: undefined });
-                }}
-              >
-                <CloseIcon />
-              </span>
-            ) : null}
-          </button>
-          {editor === "due" ? (
-            <div className="inline-editor">
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  type="date"
-                  className="date-input"
-                  value={task.dueDate ?? ""}
-                  onChange={(e) =>
-                    updateTask(task.id, { dueDate: e.target.value || undefined })
-                  }
-                />
-                <input
-                  type="time"
-                  className="date-input"
-                  style={{ width: 120 }}
-                  value={task.dueTime ?? ""}
-                  onChange={(e) =>
-                    updateTask(task.id, { dueTime: e.target.value || undefined })
-                  }
-                />
-              </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button
-                  className="btn small"
-                  onClick={() =>
-                    updateTask(task.id, {
-                      dueDate: todayISO(),
-                      dueTime: undefined,
-                    })
-                  }
-                >
-                  今天
-                </button>
-                <button
-                  className="btn small"
-                  onClick={() => {
-                    const d = new Date();
-                    d.setDate(d.getDate() + 1);
-                    updateTask(task.id, {
-                      dueDate: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
-                      dueTime: undefined,
-                    });
-                  }}
-                >
-                  明天
-                </button>
-              </div>
-            </div>
-          ) : null}
-
-          <button
-            className="detail-row"
-            onClick={() => setEditor(editor === "reminder" ? null : "reminder")}
-          >
-            <span className="row-icon">
-              <BellIcon />
-            </span>
-            <span className={`row-value ${task.reminderAt ? "" : "muted"}`}>
-              {task.reminderAt ? reminderLabel(task.reminderAt) : "提醒我"}
-            </span>
-            {task.reminderAt ? (
-              <span
-                className="clear-btn"
-                role="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  updateTask(task.id, { reminderAt: undefined });
-                }}
-              >
-                <CloseIcon />
-              </span>
-            ) : null}
-          </button>
-          {editor === "reminder" ? (
-            <div className="inline-editor">
-              <input
-                type="datetime-local"
-                className="date-input"
-                value={toLocalInput(task.reminderAt)}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const ts = value ? new Date(value).getTime() : undefined;
-                  updateTask(task.id, { reminderAt: ts });
-                }}
-              />
-              <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-                仅在应用运行时提醒；可开启托盘常驻与开机自启。
-              </div>
-            </div>
-          ) : null}
-
-          <button
-            className="detail-row"
-            onClick={() => setEditor(editor === "repeat" ? null : "repeat")}
-          >
-            <span className="row-icon">
-              <RepeatIcon />
-            </span>
-            <span className={`row-value ${task.recurrence ? "" : "muted"}`}>
-              {task.recurrence ? describeRecurrence(task.recurrence) : "重复"}
-            </span>
-            {task.recurrence ? (
-              <span
-                className="clear-btn"
-                role="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRecurrence(undefined);
-                }}
-              >
-                <CloseIcon />
-              </span>
-            ) : null}
-          </button>
-          {editor === "repeat" ? (
-            <div className="inline-editor">
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <select
-                  className="select-input"
-                  style={{ flex: "1 1 150px" }}
-                  value={task.recurrence?.freq ?? ""}
-                  onChange={(e) => {
-                    const freq = e.target.value;
-                    if (!freq) {
-                      setRecurrence(undefined);
-                      return;
-                    }
-                    setRecurrence({
-                      freq: freq as RecurrenceRule["freq"],
-                      interval: task.recurrence?.interval ?? 1,
-                      byWeekday:
-                        freq === "weekly"
-                          ? (task.recurrence?.byWeekday ?? [
-                              task.dueDate
-                                ? new Date(`${task.dueDate}T00:00:00`).getDay()
-                                : new Date().getDay(),
-                            ])
-                          : undefined,
-                      endDate: task.recurrence?.endDate,
-                      totalOccurrences: task.recurrence?.totalOccurrences,
-                    });
-                  }}
-                >
-                  <option value="">不重复</option>
-                  <option value="daily">每天</option>
-                  <option value="weekly">每周</option>
-                  <option value="monthly">每月</option>
-                  <option value="yearly">每年</option>
-                </select>
-                {task.recurrence ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      flex: "0 0 auto",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    <span style={{ fontSize: 12 }}>间隔</span>
-                    <input
-                      type="number"
-                      min={1}
-                      className="date-input"
-                      style={{ width: 64 }}
-                      value={task.recurrence.interval}
-                      onChange={(e) =>
-                        setRecurrence({
-                          ...ensureRule(),
-                          interval: Math.max(1, Number(e.target.value) || 1),
-                        })
-                      }
-                    />
-                  </div>
-                ) : null}
-              </div>
-              {task.recurrence?.freq === "weekly" ? (
-                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                  {WEEKDAY_NAMES.map((name, index) => {
-                    const on = task.recurrence?.byWeekday?.includes(index);
-                    return (
-                      <button
-                        key={name}
-                        className="radio-chip"
-                        style={
-                          on
-                            ? {
-                                background: "var(--accent-soft)",
-                                borderColor: "var(--accent)",
-                                color: "var(--accent)",
-                              }
-                            : { height: 24, padding: "0 8px" }
-                        }
-                        onClick={() => {
-                          const current = new Set(task.recurrence?.byWeekday ?? []);
-                          if (current.has(index)) current.delete(index);
-                          else current.add(index);
-                          if (current.size === 0) current.add(index);
-                          setRecurrence({
-                            ...ensureRule(),
-                            byWeekday: [...current].sort(),
-                          });
-                        }}
-                      >
-                        {name}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
-              {task.recurrence ? (
-                <div>
-                  <span className="field-label">结束日期（可选）</span>
-                  <input
-                    type="date"
-                    className="date-input"
-                    value={task.recurrence.endDate ?? ""}
-                    onChange={(e) =>
-                      setRecurrence({
-                        ...ensureRule(),
-                        endDate: e.target.value || undefined,
-                      })
-                    }
-                  />
-                </div>
-              ) : null}
-              <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-                完成当前任务后，会自动生成下一次实例。
-              </div>
-            </div>
-          ) : null}
-
-          <button
-            className="detail-row"
             onClick={() => setMyDay(task.id, inMyDay ? null : todayISO())}
           >
-            <span className="row-icon" style={inMyDay ? { color: "var(--accent)" } : undefined}>
+            <span
+              className="row-icon"
+              style={
+                inMyDay
+                  ? { color: "var(--theme-accent, var(--accent))" }
+                  : undefined
+              }
+            >
               <SunIcon />
             </span>
             <span className="row-value">
-              {inMyDay ? "从我的一天移除" : "添加到「我的一天」"}
+              {inMyDay ? "从我的一天移除" : "添加到“我的一天”"}
             </span>
           </button>
         </div>
 
         <div className="detail-block">
-          <span className="field-label">备注</span>
-          <textarea
-            className="notes-area"
-            placeholder="添加备注"
-            value={task.notes ?? ""}
-            onChange={(e) =>
-              updateTask(task.id, { notes: e.target.value || undefined })
-            }
-          />
-        </div>
-
-        <div className="detail-block">
-          <span className="field-label">标签</span>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
-            {(task.tags ?? []).map((tag) => (
-              <span
-                key={tag}
-                className="badge"
-                style={{ gap: 4, height: 22 }}
-              >
-                {tag}
-                <button
-                  onClick={() =>
-                    updateTask(task.id, {
-                      tags: (task.tags ?? []).filter((t) => t !== tag),
-                    })
-                  }
-                  aria-label={`删除标签 ${tag}`}
-                  style={{ display: "flex", alignItems: "center" }}
+          <div className="detail-row-wrap">
+            <button
+              className="detail-row"
+              onClick={() => {
+                setMenu(menu === "reminder" ? null : "reminder");
+              }}
+            >
+              <span className={`row-icon ${task.reminderAt ? "accent" : ""}`}>
+                <BellIcon />
+              </span>
+              <span className={`row-value ${task.reminderAt ? "stacked" : "muted"}`}>
+                {task.reminderAt ? (
+                  <>
+                    <span className="row-main accent">
+                      在 {clockLabel(task.reminderAt)} 时提醒我
+                    </span>
+                    <span className="row-sub">
+                      {dayLabel(dateToISO(new Date(task.reminderAt)))}
+                    </span>
+                  </>
+                ) : (
+                  "提醒我"
+                )}
+              </span>
+              {task.reminderAt ? (
+                <span
+                  className="clear-btn"
+                  role="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateTask(task.id, { reminderAt: undefined });
+                  }}
                 >
                   <CloseIcon />
+                </span>
+              ) : null}
+            </button>
+            {menu === "reminder" ? (
+              <div
+                className="detail-menu"
+                ref={menuRef}
+                role="menu"
+                aria-label="提醒"
+              >
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    const d = new Date();
+                    d.setHours(19, 0, 0, 0);
+                    applyReminder(d);
+                  }}
+                >
+                  <span className="menu-icon"><ClockIcon /></span>
+                  <span>今日晚些时候</span>
+                  <span className="menu-value">{timeLabel(19)}</span>
                 </button>
-              </span>
-            ))}
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    const d = tomorrowDate();
+                    d.setHours(9, 0, 0, 0);
+                    applyReminder(d);
+                  }}
+                >
+                  <span className="menu-icon"><ArrowRightIcon /></span>
+                  <span>明天</span>
+                  <span className="menu-value">
+                    {weekdayLabel(tomorrowDate())}, {timeLabel(9)}
+                  </span>
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    const d = nextMondayDate();
+                    d.setHours(9, 0, 0, 0);
+                    applyReminder(d);
+                  }}
+                >
+                  <span className="menu-icon"><ChevronsRightIcon /></span>
+                  <span>下周</span>
+                  <span className="menu-value">周一, {timeLabel(9)}</span>
+                </button>
+                <button role="menuitem" onClick={() => openPicker("reminder")}>
+                  <span className="menu-icon"><CalendarIcon /></span>
+                  <span>选择日期和时间</span>
+                </button>
+              </div>
+            ) : null}
+            {picker === "reminder" ? (
+              <DateTimePicker
+                initialDate={
+                  task.reminderAt
+                    ? dateToISO(new Date(task.reminderAt))
+                    : undefined
+                }
+                initialTime={
+                  task.reminderAt ? clockLabel(task.reminderAt) : "09:00"
+                }
+                onCancel={() => setPicker(null)}
+                onSave={(date, time) => {
+                  updateTask(task.id, {
+                    reminderAt: new Date(`${date}T${time}:00`).getTime(),
+                  });
+                  setPicker(null);
+                }}
+              />
+            ) : null}
           </div>
-          <input
-            className="text-input"
-            placeholder="输入标签后按 Enter"
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") addTag();
-            }}
-          />
+
+          <div className="detail-row-wrap">
+            <button
+              className="detail-row"
+              onClick={() => {
+                setMenu(menu === "due" ? null : "due");
+              }}
+            >
+              <span
+                className={`row-icon ${
+                  task.dueDate
+                    ? isOverdue(task.dueDate, task.dueTime)
+                      ? "danger"
+                      : "accent"
+                    : ""
+                }`}
+              >
+                <CalendarIcon />
+              </span>
+              <span
+                className={`row-value ${
+                  task.dueDate
+                    ? isOverdue(task.dueDate, task.dueTime)
+                      ? "danger"
+                      : "accent"
+                    : "muted"
+                }`}
+              >
+                {task.dueDate
+                  ? `${dayLabel(task.dueDate)}${
+                      task.dueTime ? ` ${task.dueTime}` : ""
+                    } 到期`
+                  : "添加截止日期"}
+              </span>
+              {task.dueDate ? (
+                <span
+                  className="clear-btn"
+                  role="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateTask(task.id, { dueDate: undefined, dueTime: undefined });
+                  }}
+                >
+                  <CloseIcon />
+                </span>
+              ) : null}
+            </button>
+            {menu === "due" ? (
+              <div
+                className="detail-menu"
+                ref={menuRef}
+                role="menu"
+                aria-label="截止日期"
+              >
+                <button role="menuitem" onClick={() => applyDue(new Date())}>
+                  <span className="menu-icon"><CalendarDaysIcon /></span>
+                  <span>今天</span>
+                  <span className="menu-value">{weekdayLabel(new Date())}</span>
+                </button>
+                <button role="menuitem" onClick={() => applyDue(tomorrowDate())}>
+                  <span className="menu-icon"><CalendarArrowUpIcon /></span>
+                  <span>明天</span>
+                  <span className="menu-value">{weekdayLabel(tomorrowDate())}</span>
+                </button>
+                <button role="menuitem" onClick={() => applyDue(nextMondayDate())}>
+                  <span className="menu-icon"><CalendarRangeIcon /></span>
+                  <span>下周</span>
+                  <span className="menu-value">周一</span>
+                </button>
+                <button role="menuitem" onClick={() => openPicker("due")}>
+                  <span className="menu-icon"><CalendarIcon /></span>
+                  <span>选择日期</span>
+                </button>
+              </div>
+            ) : null}
+            {picker === "due" ? (
+              <DateTimePicker
+                initialDate={task.dueDate}
+                withTime={false}
+                onCancel={() => setPicker(null)}
+                onSave={(date) => {
+                  updateTask(task.id, { dueDate: date, dueTime: undefined });
+                  setPicker(null);
+                }}
+              />
+            ) : null}
+          </div>
+
+          <div className="detail-row-wrap">
+            <button
+              className="detail-row"
+              onClick={() => {
+                setMenu(menu === "repeat" ? null : "repeat");
+              }}
+            >
+              <span className={`row-icon ${task.recurrence ? "accent" : ""}`}>
+                <RepeatIcon />
+              </span>
+              <span className={`row-value ${task.recurrence ? "accent" : "muted"}`}>
+                {task.recurrence ? describeRecurrence(task.recurrence) : "重复"}
+              </span>
+              {task.recurrence ? (
+                <span
+                  className="clear-btn"
+                  role="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRecurrence(undefined);
+                  }}
+                >
+                  <CloseIcon />
+                </span>
+              ) : null}
+            </button>
+            {menu === "repeat" ? (
+              <div
+                className="detail-menu"
+                ref={menuRef}
+                role="menu"
+                aria-label="重复"
+              >
+                <button
+                  role="menuitem"
+                  onClick={() => applyRepeat({ freq: "daily", interval: 1 })}
+                >
+                  <span className="menu-icon"><CalendarDaysIcon /></span>
+                  <span>每天</span>
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() =>
+                    applyRepeat({
+                      freq: "weekly",
+                      interval: 1,
+                      byWeekday: [1, 2, 3, 4, 5],
+                    })
+                  }
+                >
+                  <span className="menu-icon"><CalendarCheckIcon /></span>
+                  <span>工作日</span>
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    const day = task.dueDate
+                      ? new Date(`${task.dueDate}T00:00:00`).getDay()
+                      : new Date().getDay();
+                    applyRepeat({
+                      freq: "weekly",
+                      interval: 1,
+                      byWeekday: [day],
+                    });
+                  }}
+                >
+                  <span className="menu-icon"><CalendarRangeIcon /></span>
+                  <span>每周</span>
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => applyRepeat({ freq: "monthly", interval: 1 })}
+                >
+                  <span className="menu-icon"><CalendarIcon /></span>
+                  <span>每月</span>
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => applyRepeat({ freq: "yearly", interval: 1 })}
+                >
+                  <span className="menu-icon"><SparklesIcon /></span>
+                  <span>每年</span>
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    setMenu(null);
+                    setRepeatDialogOpen(true);
+                  }}
+                >
+                  <span className="menu-icon"><RepeatIcon /></span>
+                  <span>自定义</span>
+                </button>
+              </div>
+            ) : null}
+          </div>
+
         </div>
 
+        {overdueRecurring ? (
+          <div className="detail-cleanup">
+            <div className="detail-cleanup-title">清理未完成的任务</div>
+            <div className="detail-cleanup-text">
+              尚未将某些定期任务标记为已完成。是否要删除未完成的任务并跳到当前任务？
+            </div>
+            <button
+              type="button"
+              className="detail-cleanup-action"
+              onClick={jumpToCurrent}
+            >
+              跳转到当前任务
+            </button>
+          </div>
+        ) : null}
+
         <div className="detail-block">
-          <span className="field-label">附件</span>
           {attachments.map((att) => (
             <div
               key={att.id}
@@ -568,22 +716,63 @@ export function TaskDetail() {
             }}
           >
             <span className="row-icon">
-              <FolderIcon />
+              <AttachIcon />
             </span>
-            <span className="row-value muted">添加附件</span>
+            <span className="row-value muted">添加文件</span>
           </button>
+        </div>
+
+        <div className="detail-block">
+          <textarea
+            className="notes-area"
+            placeholder="添加备注"
+            value={task.notes ?? ""}
+            onChange={(e) =>
+              updateTask(task.id, { notes: e.target.value || undefined })
+            }
+          />
+        </div>
+
+        <div className="detail-block detail-tags">
+          <span className="field-label">标签</span>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+            {(task.tags ?? []).map((tag) => (
+              <span key={tag} className="badge" style={{ gap: 4, height: 22 }}>
+                {tag}
+                <button
+                  onClick={() =>
+                    updateTask(task.id, {
+                      tags: (task.tags ?? []).filter((t) => t !== tag),
+                    })
+                  }
+                  aria-label={`删除标签 ${tag}`}
+                  style={{ display: "flex", alignItems: "center" }}
+                >
+                  <CloseIcon />
+                </button>
+              </span>
+            ))}
+          </div>
+          <input
+            className="text-input"
+            placeholder="输入标签后按 Enter"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addTag();
+            }}
+          />
         </div>
       </div>
 
       <div className="detail-footer">
-        <span>{new Date(task.createdAt).toLocaleDateString("zh-CN")} 创建</span>
+        <span>创建于 {createdAtLabel(task.createdAt)}</span>
         {task.completedAt ? (
-          <span>· {new Date(task.completedAt).toLocaleDateString("zh-CN")} 完成</span>
+          <span>· 完成于 {createdAtLabel(task.completedAt)}</span>
         ) : null}
         <span className="spacer" />
         <select
-          className="select-input"
-          style={{ width: 130, height: 28, fontSize: 12 }}
+          className="detail-list-select"
           value={task.listId}
           onChange={(e) => moveTask(task.id, e.target.value)}
           title="移动到列表"
@@ -594,7 +783,43 @@ export function TaskDetail() {
             </option>
           ))}
         </select>
+        <button
+          className="icon-btn"
+          onClick={() => duplicateTask(task.id)}
+          title="创建副本"
+          aria-label="创建副本"
+        >
+          <CopyIcon />
+        </button>
+        <button
+          className="icon-btn"
+          onClick={() => deleteTask(task.id)}
+          title="删除任务"
+          aria-label="删除任务"
+        >
+          <TrashIcon />
+        </button>
+        <button
+          className="icon-btn"
+          onClick={() => selectTask(null)}
+          title="关闭"
+          aria-label="关闭"
+        >
+          <CloseIcon />
+        </button>
       </div>
     </section>
+    {repeatDialogOpen ? (
+      <RepeatDialog
+        rule={task.recurrence}
+        dueDate={task.dueDate}
+        onCancel={() => setRepeatDialogOpen(false)}
+        onSave={(rule) => {
+          applyRepeat(rule);
+          setRepeatDialogOpen(false);
+        }}
+      />
+    ) : null}
+    </>
   );
 }
