@@ -13,6 +13,7 @@
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License" /></a>
     <img src="https://img.shields.io/badge/Tauri-v2-24C8DB?style=flat-square" alt="Tauri v2" />
     <img src="https://img.shields.io/badge/React-18-61DAFB?style=flat-square" alt="React 18" />
+    <a href="https://linux.do/"><img src="https://img.shields.io/badge/Community-LINUX_DO-1c1c1e?style=flat-square" alt="LINUX DO" /></a>
   </p>
 </div>
 
@@ -173,6 +174,12 @@ public/backgrounds/  14 套内置 CC0 实景壁纸
 tests/               Vitest 单元测试
 scripts/             版本同步等工程脚本
 ```
+
+---
+
+## 友链
+
+- [**LINUX DO**](https://linux.do/) — 真诚、友善、团结、专业，共建你我引以为荣之社区。
 
 ---
 
