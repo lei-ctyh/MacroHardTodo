@@ -115,7 +115,14 @@ export function MainPane({
     const map = new Map<string, string>();
     for (const list of activeLists(db)) {
       const display = splitLeadingEmoji(list.name);
-      map.set(list.id, display.emoji ? display.text || display.emoji : list.name);
+      map.set(
+        list.id,
+        display.emoji
+          ? display.text
+            ? `${display.emoji} ${display.text}`
+            : display.emoji
+          : list.name,
+      );
     }
     return map;
   }, [db]);
@@ -188,6 +195,7 @@ export function MainPane({
     task,
     selected: task.id === selectedTaskId,
     listName: withListName ? listNames.get(task.listId) : undefined,
+    hideMyDay: isMyDay,
     onSelect: () => selectTask(task.id === selectedTaskId ? null : task.id),
     onToggle: () => toggleComplete(task.id),
     onToggleStar: () => toggleImportance(task.id),

@@ -30,6 +30,20 @@ function weekdayCN(d: Date): string {
   return "日一二三四五六"[d.getDay()];
 }
 
+/** 任务行紧凑日期标签（不含具体时间）：今天 / 明天 / 昨天 / 9月27日, 周日 / 2027年4月24日, 周六 */
+export function dueDateLabel(dueDate?: string): string {
+  if (!dueDate) return "";
+  const today = todayISO();
+  if (dueDate === today) return "今天";
+  if (dueDate === dateToISO(new Date(Date.now() + 86400000))) return "明天";
+  if (dueDate === dateToISO(new Date(Date.now() - 86400000))) return "昨天";
+  const d = isoToDate(dueDate);
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return sameYear
+    ? `${d.getMonth() + 1}月${d.getDate()}日, 周${weekdayCN(d)}`
+    : `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日, 周${weekdayCN(d)}`;
+}
+
 /** 人类可读的日期标签，尽量贴近 MS To Do 的措辞 */
 export function dueLabel(dueDate?: string, dueTime?: string): string {
   if (!dueDate) return "";

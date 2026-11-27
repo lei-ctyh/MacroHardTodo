@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   DEFAULT_LIST_ID,
@@ -51,7 +51,10 @@ export function TaskContextMenu({
   const confirmDelete = useStore((s) => s.confirmDelete);
 
   const [moveOpen, setMoveOpen] = useState(false);
+  const [submenuTop, setSubmenuTop] = useState(-4);
   const menuRef = useRef<HTMLDivElement>(null);
+  const flyoutRef = useRef<HTMLDivElement>(null);
+  const submenuRef = useRef<HTMLDivElement>(null);
 
   const orderedLists = useMemo(() => {
     const all = activeLists(db);
@@ -68,6 +71,19 @@ export function TaskContextMenu({
     }
     return defaultList ? [defaultList, ...orderedCustom] : orderedCustom;
   }, [db]);
+
+  useLayoutEffect(() => {
+    if (!moveOpen || !flyoutRef.current || !submenuRef.current) return;
+    const flyRect = flyoutRef.current.getBoundingClientRect();
+    const subHeight = submenuRef.current.offsetHeight;
+    const margin = 8;
+    const desiredTop = flyRect.top - 4;
+    const clampedTop = Math.max(
+      margin,
+      Math.min(desiredTop, window.innerHeight - subHeight - margin),
+    );
+    setSubmenuTop(clampedTop - flyRect.top);
+  }, [moveOpen, orderedLists.length]);
 
   const requestDelete = () => {
     confirmDelete({
@@ -222,6 +238,7 @@ export function TaskContextMenu({
       <div className="sep" />
 
       <div
+        ref={flyoutRef}
         className={`list-menu-flyout ${flipLeft ? "flip-left" : ""}`}
         onMouseEnter={() => setMoveOpen(true)}
         onMouseLeave={() => setMoveOpen(false)}
@@ -240,9 +257,11 @@ export function TaskContextMenu({
         </button>
         {moveOpen ? (
           <div
+            ref={submenuRef}
             className={`menu list-submenu task-submenu ${
               flipLeft ? "flip-left" : ""
             }`}
+            style={{ top: submenuTop }}
             role="menu"
             aria-label="移动到列表"
           >

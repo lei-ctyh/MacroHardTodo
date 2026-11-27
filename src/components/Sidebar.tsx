@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   DndContext,
@@ -591,9 +591,25 @@ function SortableListRow({
     useSortable({ id: list.id });
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [submenuTop, setSubmenuTop] = useState(-4);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(list.name);
   const menuRef = useRef<HTMLDivElement>(null);
+  const flyoutRef = useRef<HTMLDivElement>(null);
+  const submenuRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!moveOpen || !flyoutRef.current || !submenuRef.current) return;
+    const flyRect = flyoutRef.current.getBoundingClientRect();
+    const subHeight = submenuRef.current.offsetHeight;
+    const margin = 8;
+    const desiredTop = flyRect.top - 4;
+    const clampedTop = Math.max(
+      margin,
+      Math.min(desiredTop, window.innerHeight - subHeight - margin),
+    );
+    setSubmenuTop(clampedTop - flyRect.top);
+  }, [moveOpen, groups.length, list.groupId]);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -724,6 +740,7 @@ function SortableListRow({
               </button>
               {groups.length > 0 ? (
                 <div
+                  ref={flyoutRef}
                   className="list-menu-flyout"
                   onMouseEnter={() => setMoveOpen(true)}
                   onMouseLeave={() => setMoveOpen(false)}
@@ -741,7 +758,9 @@ function SortableListRow({
                   </button>
                   {moveOpen ? (
                     <div
+                      ref={submenuRef}
                       className="menu list-submenu"
+                      style={{ top: submenuTop }}
                       role="menu"
                       aria-label="移动到分组"
                     >
