@@ -19,6 +19,7 @@ MacroHardTodo/
 │   │   ├── GroupRow.tsx      sidebar group header (collapse, inline rename, hover menu, droppable)
 │   │   ├── SectionHeader.tsx view-level section header (task-list/date groups, completed area)
 │   │   ├── TaskRow.tsx
+│   │   ├── TaskContextMenu.tsx portaled right-click menu on task rows (My Day, star, complete, due date, move-to-list flyout, delete)
 │   │   ├── TaskDetail.tsx    right-side detail panel (card sections, reminder/due/repeat menus, overdue cleanup)
 │   │   ├── DateTimePicker.tsx custom date/time picker backed by react-day-picker
 │   │   ├── RepeatDialog.tsx  narrow modal custom recurrence editor with portaled popovers
