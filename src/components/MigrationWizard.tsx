@@ -12,15 +12,35 @@ import { Modal } from "./Modal";
 import {
   BackIcon,
   CheckIcon,
+  CheckSmallIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
   CopyIcon,
   DownloadIcon,
-  InfoIcon,
   OpenIcon,
   PersonIcon,
   WarningIcon,
 } from "./icons";
 
 type Step = "config" | "auth" | "fetching" | "preview" | "done";
+
+const WIZARD_STEPS = ["配置", "授权", "选择", "完成"] as const;
+const ENTRA_PORTAL_URL =
+  "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade";
+
+function stepIndex(step: Step): number {
+  switch (step) {
+    case "config":
+      return 0;
+    case "auth":
+    case "fetching":
+      return 1;
+    case "preview":
+      return 2;
+    case "done":
+      return 3;
+  }
+}
 
 export function MigrationWizard() {
   const db = useStore((s) => s.db);
@@ -30,12 +50,16 @@ export function MigrationWizard() {
 
   const [step, setStep] = useState<Step>("config");
   const [clientId, setClientId] = useState(db.settings.graphClientId ?? "");
+  const [guideOpen, setGuideOpen] = useState(false);
   const [device, setDevice] = useState<GraphDeviceInfo | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [lists, setLists] = useState<GraphListRawLite[]>([]);
-  const [tasksByList, setTasksByList] = useState<Record<string, GraphTaskRaw[]>>({});
+  const [tasksByList, setTasksByList] = useState<Record<string, GraphTaskRaw[]>>(
+    {},
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState("");
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<ImportStats | null>(null);
   const [copied, setCopied] = useState(false);
@@ -55,8 +79,9 @@ export function MigrationWizard() {
 
   const start = async () => {
     setError(null);
+    setAuthNotice(null);
     if (!clientId.trim()) {
-      setError("请填写应用程序(客户端) ID");
+      setError("请先填写应用程序 (客户端) ID");
       return;
     }
     try {
@@ -74,38 +99,58 @@ export function MigrationWizard() {
     }
   };
 
-  // 轮询设备码授权
+  // 轮询设备码授权（网络抖动自动重试，直到成功、明确拒绝或设备码过期）
   useEffect(() => {
     if (step !== "auth" || !device) return;
     let disposed = false;
     let interval = Math.max(3, device.interval || 5);
+    let consecutiveFailures = 0;
+    const expiresAt = Date.now() + (device.expiresIn || 900) * 1000;
     let timer: ReturnType<typeof setTimeout>;
+
+    const scheduleNext = (delaySec: number) => {
+      if (disposed) return;
+      if (Date.now() >= expiresAt) {
+        setAuthNotice(null);
+        setError("设备码已过期，请重新获取");
+        return;
+      }
+      timer = setTimeout(poll, delaySec * 1000);
+    };
 
     const poll = async () => {
       try {
         const res = await api.graphPollToken(clientId.trim(), device.deviceCode);
         if (disposed) return;
+        consecutiveFailures = 0;
+        setAuthNotice(null);
         if (res.status === "ok" && res.accessToken) {
+          setError(null);
           setToken(res.accessToken);
           setStep("fetching");
           return;
         }
         if (res.status === "pending") {
-          timer = setTimeout(poll, interval * 1000);
+          scheduleNext(interval);
           return;
         }
         if (res.status === "slow_down") {
           interval += 5;
-          timer = setTimeout(poll, interval * 1000);
+          scheduleNext(interval);
           return;
         }
         setError(res.message ?? "授权未完成，请重试");
-      } catch (err) {
-        if (!disposed) setError(String(err));
+      } catch {
+        if (disposed) return;
+        consecutiveFailures += 1;
+        if (consecutiveFailures >= 2) {
+          setAuthNotice(`网络波动，正在自动重试（第 ${consecutiveFailures} 次）…`);
+        }
+        scheduleNext(Math.min(10, interval + consecutiveFailures));
       }
     };
 
-    timer = setTimeout(poll, interval * 1000);
+    scheduleNext(interval);
     return () => {
       disposed = true;
       clearTimeout(timer);
@@ -187,166 +232,214 @@ export function MigrationWizard() {
     }
   };
 
+  const allSelected = lists.length > 0 && selected.size === lists.length;
+  const toggleAll = () => {
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(lists.map((l) => l.id)));
+  };
+
+  const activeIdx = stepIndex(step);
+
   return (
     <Modal
       title="从微软 To Do 迁移"
-      wide
       onClose={close}
       footer={
         <>
           {step === "preview" ? (
-            <button className="btn" onClick={() => setStep("config")}>
-              <BackIcon /> 上一步
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setStep("config")}
+            >
+              <BackIcon size={14} /> 上一步
             </button>
           ) : null}
           <span className="spacer" />
           {step === "config" ? (
-            <button className="btn primary" onClick={start}>
-              <PersonIcon /> 登录微软账号
-            </button>
+            <>
+              <button type="button" className="btn" onClick={close}>
+                取消
+              </button>
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => void start()}
+              >
+                <PersonIcon size={14} /> 登录微软账号
+              </button>
+            </>
           ) : null}
           {step === "preview" ? (
-            <button className="btn primary" onClick={doImport}>
-              <DownloadIcon /> 导入所选（{totals.tasks} 个任务）
+            <button
+              type="button"
+              className="btn primary"
+              disabled={selected.size === 0}
+              onClick={doImport}
+            >
+              <DownloadIcon size={14} /> 导入所选（{totals.tasks}）
             </button>
           ) : null}
           {step === "done" ? (
-            <button className="btn primary" onClick={close}>
+            <button type="button" className="btn primary" onClick={close}>
               完成
             </button>
           ) : null}
           {step === "auth" || step === "fetching" ? (
-            <button className="btn" onClick={close}>
-              取消
-            </button>
+            <>
+              {step === "auth" && error ? (
+                <button
+                  type="button"
+                  className="btn primary"
+                  onClick={() => void start()}
+                >
+                  重新获取设备码
+                </button>
+              ) : null}
+              <button type="button" className="btn" onClick={close}>
+                取消
+              </button>
+            </>
           ) : null}
         </>
       }
     >
+      <div className="wizard-steps" aria-label="迁移步骤">
+        {WIZARD_STEPS.map((label, idx) => {
+          const done = idx < activeIdx;
+          const active = idx === activeIdx;
+          return (
+            <div
+              key={label}
+              className={`wizard-step ${active ? "active" : ""} ${
+                done ? "done" : ""
+              }`}
+            >
+              <span className="wizard-step-dot">
+                {done ? <CheckSmallIcon size={11} /> : idx + 1}
+              </span>
+              <span className="wizard-step-label">{label}</span>
+              {idx < WIZARD_STEPS.length - 1 ? (
+                <span className="wizard-step-line" aria-hidden />
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
       {error ? (
         <div className="status-line error">
-          <WarningIcon />
+          <WarningIcon size={14} />
           <span>{error}</span>
         </div>
       ) : null}
 
       {step === "config" ? (
         <>
-          <div className="status-line info">
-            <InfoIcon />
-            <span>
-              迁移通过微软官方 Microsoft Graph 接口读取你自己的数据，只在本次迁移时使用访问令牌，不会上传到任何第三方。
-            </span>
-          </div>
-
           <div className="form-row">
-            <label>应用程序(客户端) ID</label>
+            <label htmlFor="graph-client-id">应用程序 (客户端) ID</label>
             <input
+              id="graph-client-id"
               type="text"
               value={clientId}
-              placeholder="例如 11111111-2222-3333-4444-555555555555"
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
               onChange={(e) => setClientId(e.target.value)}
             />
-            <div className="hint">
-              需要一个免费的 Entra 应用注册（一次性，约 3 分钟），见下方步骤。
-            </div>
           </div>
 
-          <details style={{ marginTop: 8 }}>
-            <summary style={{ cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-              如何获取客户端 ID
-            </summary>
-            <ol
-              style={{
-                fontSize: 12,
-                lineHeight: 1.9,
-                color: "var(--text-secondary)",
-                paddingLeft: 20,
-                marginTop: 8,
-              }}
-            >
-              <li>
-                打开{" "}
-                <button
-                  className="btn small"
-                  onClick={() =>
-                    openUrl("https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade").catch(
-                      () => {},
-                    )
-                  }
-                >
-                  <OpenIcon /> Entra 应用注册
-                </button>
-              </li>
-              <li>点击「新注册」，名称随意。</li>
-              <li>受支持的帐户类型选择「仅个人 Microsoft 帐户」或「任何组织目录 + 个人帐户」。</li>
-              <li>重定向 URI 留空，直接「注册」。</li>
-              <li>在概述页复制「应用程序(客户端) ID」。</li>
-              <li>进入「身份验证」→ 允许公共客户端流 → 选「是」并保存。</li>
-              <li>进入「API 权限」→ 添加权限 → Microsoft Graph → 委托的权限 → 勾选 Tasks.Read → 添加。</li>
-            </ol>
-          </details>
-
-          <div className="status-line warn">
-            可迁移：列表、任务、步骤、截止日期、提醒、重要、重复规则、备注。
-            无法迁移：My Day 的历史安排、标记邮件（Graph 接口不提供）。
+          <div className="wizard-guide">
+            <div className="wizard-guide-head">
+              <button
+                type="button"
+                className="wizard-guide-toggle"
+                aria-expanded={guideOpen}
+                onClick={() => setGuideOpen((open) => !open)}
+              >
+                {guideOpen ? (
+                  <ChevronDownIcon size={15} />
+                ) : (
+                  <ChevronRightIcon size={15} />
+                )}
+                <span>如何获取客户端 ID</span>
+              </button>
+              <button
+                type="button"
+                className="wizard-link-btn"
+                onClick={() => void openUrl(ENTRA_PORTAL_URL).catch(() => {})}
+              >
+                <span>打开 Azure Portal</span>
+                <OpenIcon size={12} />
+              </button>
+            </div>
+            {guideOpen ? (
+              <ol className="wizard-guide-list">
+                <li>在 Entra 应用注册中点击「新注册」，名称随意。</li>
+                <li>帐户类型选「仅个人 Microsoft 帐户」或「任何组织目录 + 个人帐户」。</li>
+                <li>重定向 URI 留空，直接点击「注册」，复制概述页的客户端 ID。</li>
+                <li>进入「身份验证」→ 开启「允许公共客户端流」并保存。</li>
+                <li>进入「API 权限」→ 添加 Microsoft Graph 委托权限 Tasks.Read。</li>
+              </ol>
+            ) : null}
           </div>
         </>
       ) : null}
 
       {step === "auth" && device ? (
-        <>
-          <div className="status-line info">
-            <InfoIcon />
-            <span>
-              已在浏览器中打开微软登录页。输入下面的代码并完成登录；如果浏览器没有打开，请访问{" "}
-              <span className="mono">{device.verificationUri}</span>。
-            </span>
-          </div>
-          <div className="code-box">
-            <span className="mono">{device.userCode}</span>
-            <button className="icon-btn" onClick={copyCode} title="复制代码">
-              <CopyIcon />
-            </button>
-          </div>
-          {copied ? (
-            <div style={{ fontSize: 12, color: "var(--accent)", marginTop: 6 }}>
-              已复制
-            </div>
-          ) : null}
-          <div className="settings-line" style={{ marginTop: 10 }}>
-            <span className="spinner" />
-            <div className="grow">
-              <div>等待登录完成…</div>
-              <div className="sub">登录后会自动继续，无需刷新</div>
-            </div>
+        <div className="wizard-auth">
+          <div className="code-card">
+            <div className="code-card-value mono">{device.userCode}</div>
             <button
+              type="button"
               className="btn small"
-              onClick={() => openUrl(device.verificationUri).catch(() => {})}
+              onClick={() => void copyCode()}
             >
-              重新打开登录页
+              <CopyIcon size={13} />
+              {copied ? "已复制" : "复制代码"}
             </button>
           </div>
-        </>
+          <div className="wizard-auth-status">
+            {!error ? <span className="spinner" /> : null}
+            <span>
+              {error
+                ? "授权已中断"
+                : authNotice ?? "请在浏览器输入代码完成登录…"}
+            </span>
+            <button
+              type="button"
+              className="wizard-link-btn"
+              onClick={() =>
+                void openUrl(device.verificationUri).catch(() => {})
+              }
+            >
+              <span>重新打开</span>
+              <OpenIcon size={12} />
+            </button>
+          </div>
+        </div>
       ) : null}
 
       {step === "fetching" ? (
-        <div className="settings-line">
+        <div className="wizard-loading">
           <span className="spinner" />
-          <div className="grow">
-            <div>{progress || "正在读取…"}</div>
-            <div className="sub">数据量较大时需要一点时间，请勿关闭窗口</div>
-          </div>
+          <span>{progress || "正在读取列表与任务…"}</span>
         </div>
       ) : null}
 
       {step === "preview" ? (
         <>
-          <div className="status-line info">
-            <InfoIcon />
+          <div className="wizard-preview-head">
             <span>
-              找到 {lists.length} 个列表，共 {totals.tasks} 个任务、{totals.steps} 个步骤。默认全部导入，可取消勾选不需要的列表。
+              已选 {selected.size} / {lists.length} 个列表 · {totals.tasks}{" "}
+              个任务
+              {totals.steps > 0 ? ` · ${totals.steps} 个步骤` : ""}
             </span>
+            <button
+              type="button"
+              className="wizard-link-btn"
+              onClick={toggleAll}
+            >
+              {allSelected ? "取消全选" : "全选"}
+            </button>
           </div>
           <div className="list-picker">
             {lists.map((list) => {
@@ -364,51 +457,38 @@ export function MigrationWizard() {
                       setSelected(next);
                     }}
                   />
-                  <span style={{ flex: 1 }}>{list.displayName ?? "未命名列表"}</span>
-                  <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                    {count} 项
+                  <span className="check-row-name">
+                    {list.displayName ?? "未命名列表"}
                   </span>
+                  <span className="check-row-count">{count}</span>
                 </label>
               );
             })}
-          </div>
-          <div
-            style={{
-              marginTop: 10,
-              fontSize: 12,
-              color: "var(--text-tertiary)",
-              display: "flex",
-              gap: 6,
-            }}
-          >
-            <CheckIcon />
-            重复运行只会补充新任务，不会重复创建。
           </div>
         </>
       ) : null}
 
       {step === "done" && stats ? (
-        <>
-          <div className="status-line info">
-            <CheckIcon />
-            <span>迁移完成。</span>
+        <div className="wizard-done">
+          <div className="wizard-done-icon">
+            <CheckIcon size={22} />
           </div>
-          <div className="settings-line">
-            <div className="grow">新建列表</div>
-            <strong>{stats.createdLists}</strong>
+          <div className="wizard-done-title">迁移完成</div>
+          <div className="wizard-stats">
+            <div className="wizard-stat-card">
+              <div className="wizard-stat-num">{stats.createdLists}</div>
+              <div className="wizard-stat-label">新建列表</div>
+            </div>
+            <div className="wizard-stat-card">
+              <div className="wizard-stat-num">{stats.createdTasks}</div>
+              <div className="wizard-stat-label">新建任务</div>
+            </div>
+            <div className="wizard-stat-card">
+              <div className="wizard-stat-num">{stats.skippedTasks}</div>
+              <div className="wizard-stat-label">跳过重复</div>
+            </div>
           </div>
-          <div className="settings-line">
-            <div className="grow">新建任务</div>
-            <strong>{stats.createdTasks}</strong>
-          </div>
-          <div className="settings-line">
-            <div className="grow">跳过已存在的任务</div>
-            <strong>{stats.skippedTasks}</strong>
-          </div>
-          <div className="status-line warn">
-            建议现在到设置里导出一次 JSON 备份，或者配置 WebDAV 同步。
-          </div>
-        </>
+        </div>
       ) : null}
     </Modal>
   );

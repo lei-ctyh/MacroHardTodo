@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import type { ToggleableSmartViewId } from "../lib/model";
 import { useStore } from "../store/useStore";
 import { useAvatar } from "./useAvatar";
+import { ToggleSwitch } from "./ToggleSwitch";
 import {
   AllIcon,
   BackIcon,
@@ -750,31 +751,5 @@ function SettingToggleItem({
         <ToggleSwitch checked={checked} ariaLabel={label} onChange={onChange} />
       </div>
     </div>
-  );
-}
-
-function ToggleSwitch({
-  checked,
-  ariaLabel,
-  onChange,
-}: {
-  checked: boolean;
-  ariaLabel: string;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={ariaLabel}
-      className={`toggle-switch ${checked ? "on" : ""}`}
-      onClick={() => onChange(!checked)}
-    >
-      <span className="toggle-track" aria-hidden>
-        <span className="toggle-thumb" />
-      </span>
-      <span className="toggle-text">{checked ? "开" : "关"}</span>
-    </button>
   );
 }

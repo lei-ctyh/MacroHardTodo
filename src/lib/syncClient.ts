@@ -24,6 +24,16 @@ export function resolveDataUrl(folderOrFile: string): string {
   return `${base}MacroHardTodo/data.json`;
 }
 
+/** 测试连接时探测用户填写的目录（或 .json 文件的父目录），避免首次尚未建子目录时坚果云返回 409 */
+export function resolveTestUrl(folderOrFile: string): string {
+  const trimmed = folderOrFile.trim();
+  if (/\.json$/i.test(trimmed)) {
+    const slash = trimmed.lastIndexOf("/");
+    return slash >= 0 ? trimmed.slice(0, slash + 1) : trimmed;
+  }
+  return trimmed.endsWith("/") ? trimmed : `${trimmed}/`;
+}
+
 async function decodeRemote(
   body: string,
   cfg: SyncConfig,
@@ -55,14 +65,20 @@ function validateDB(value: unknown): DB {
 
 export async function doSync(local: DB, cfg: SyncConfig): Promise<SyncOutcome> {
   const url = resolveDataUrl(cfg.url);
-  const folderUrl = url.replace(/data\.json$/, "");
+  const folderUrl = url.replace(/[^/]+$/, "");
+  const baseFolderUrl = resolveTestUrl(cfg.url);
 
-  // 确保远端目录存在（已存在时服务器返回 405，忽略即可）
-  try {
-    await api.webdavMkcol(folderUrl, cfg.user, cfg.password);
-    await api.webdavMkcol(`${folderUrl}attachments`, cfg.user, cfg.password);
-  } catch {
-    /* 目录可能已存在或服务器不支持 MKCOL */
+  // 逐级确保远端目录存在（已存在时服务器返回 405，忽略即可）
+  const dirs =
+    baseFolderUrl !== folderUrl
+      ? [baseFolderUrl, folderUrl, `${folderUrl}attachments`]
+      : [folderUrl, `${folderUrl}attachments`];
+  for (const dir of dirs) {
+    try {
+      await api.webdavMkcol(dir, cfg.user, cfg.password);
+    } catch {
+      /* 目录可能已存在或服务器不支持 MKCOL */
+    }
   }
 
   const download = await api.webdavDownload(url, cfg.user, cfg.password);
